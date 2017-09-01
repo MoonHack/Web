@@ -1,0 +1,23 @@
+{
+  "name": "moonhack_web",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "start": "ts-node src/index.ts"
+  },
+  "private": true,
+  "author": "Doridian",
+  "license": "ISC",
+  "dependencies": {
+    "@types/bluebird": "^3.5.8",
+    "@types/uuid": "^3.4.1",
+    "amqp-ts": "^1.4.0",
+    "bluebird": "^3.5.0",
+    "ts-node": "^3.3.0",
+    "typescript": "^2.5.2",
+    "uuid": "^3.1.0"
+  }
+}

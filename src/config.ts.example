@@ -1,0 +1,4 @@
+const config = {
+	"amqpUrl": "amqp://guest:guest@localhost/"
+};
+export {config};
