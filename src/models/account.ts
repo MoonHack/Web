@@ -1,6 +1,6 @@
 import { Document, Schema, model } from 'mongoose';
 
-export type AccountModel = Document & {
+export interface AccountModel extends Document {
 	login: {
 		id: string,
 		provider: string,
@@ -24,6 +24,4 @@ const accountSchema = new Schema({
 	}
 }, { timestamps: true });
 
-const Account = model('accounts', accountSchema);
-
-export {Account};
+export const Account = model('accounts', accountSchema);

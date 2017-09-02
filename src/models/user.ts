@@ -1,6 +1,6 @@
 import { Document, Schema, model } from 'mongoose';
 
-export type UserModel = Document & {
+export interface UserModel extends Document {
 	name: string,
 	owner: Schema.Types.ObjectId,
 };
@@ -10,6 +10,4 @@ const userSchema = new Schema({
 	owner: Schema.Types.ObjectId,
 }, { timestamps: true });
 
-const User = model('users', userSchema);
-
-export {User};
+export const User = model('users', userSchema);

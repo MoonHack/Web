@@ -34,7 +34,8 @@ passport.use(new SteamStrategy({
 				id,
 				provider: 'steam'
 			}
-		}).then(account => {
+		})
+		.then(account => {
 			if (account) {
 				return account;
 			}
@@ -45,7 +46,8 @@ passport.use(new SteamStrategy({
 				}
 			});
 			return account.save();
-		}).then(account => {
+		})
+		.then(account => {
 			return done(null, account);
 		}).catch(done);
 	})
