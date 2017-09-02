@@ -5,6 +5,7 @@ import { Strategy as SteamStrategy } from 'passport-steam';
 import * as express from 'express';
 import * as Bluebird from 'bluebird';
 import { config } from './config';
+import { json as jsonBodyParser } from 'body-parser';
 
 mongoose.connect(config.mongoUrl, {
 	useMongoClient: true,
@@ -53,7 +54,18 @@ passport.use(new SteamStrategy({
 	})
 );
 
+app.use(jsonBodyParser());
 app.use(passport.initialize());
+app.use(passport.session());
+
+app.get('/',
+	(req, res) => {
+		if (!req.isAuthenticated()) {
+			res.sendFile('/views/auth.html');
+			return;
+		}
+		res.sendFile('/views/index.html');
+	});
 
 app.get('/auth/steam',
 	passport.authenticate('steam', { failureRedirect: '/' }),
@@ -66,5 +78,7 @@ app.get('/auth/steam/return',
 	(_req, res) => {
 		res.redirect('/');
 	});
+
+app.use('/static', express.static('static'));
 
 app.listen(process.env.PORT || config.port);
