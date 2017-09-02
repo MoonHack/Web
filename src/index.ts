@@ -6,6 +6,7 @@ import * as express from 'express';
 import * as Bluebird from 'bluebird';
 import { config } from './config';
 import { json as jsonBodyParser } from 'body-parser';
+//import * as expressWs from 'express-ws';
 
 mongoose.connect(config.mongoUrl, {
 	useMongoClient: true,
@@ -25,16 +26,14 @@ passport.deserializeUser<AccountModel, mongoose.Schema.Types.ObjectId>((obj, don
 });
 
 passport.use(new SteamStrategy({
-		returnURL: `${config.publicUrl}auth/steam/return`,
+		returnURL: `${config.publicUrl}api/v1/auth/steam/return`,
 		realm: config.publicUrl,
 		profile: false
 	},
 	(id: string, _profile: any, done: any) => {
 		Account.findOne({
-			login: {
-				id,
-				provider: 'steam'
-			}
+			'login.id': id,
+			'login.provider': 'steam',
 		})
 		.then(account => {
 			if (account) {
@@ -67,13 +66,13 @@ app.get('/',
 		res.sendFile('/views/index.html');
 	});
 
-app.get('/auth/steam',
+app.get('/api/v1/auth/steam',
 	passport.authenticate('steam', { failureRedirect: '/' }),
 	(_req, res) => {
 		res.redirect('/');
 	});
 
-app.get('/auth/steam/return',
+app.get('/api/v1/auth/steam/return',
 	passport.authenticate('steam', { failureRedirect: '/' }),
 	(_req, res) => {
 		res.redirect('/');
