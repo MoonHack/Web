@@ -24,8 +24,8 @@ passport.deserializeUser<AccountModel, mongoose.Schema.Types.ObjectId>((obj, don
 });
 
 passport.use(new SteamStrategy({
-		returnURL: 'http://localhost:3000/auth/steam/return',
-		realm: 'http://localhost:3000/',
+		returnURL: `${config.publicUrl}auth/steam/return`,
+		realm: config.publicUrl,
 		profile: false
 	},
 	(id: string, _profile: any, done: any) => {
@@ -67,4 +67,4 @@ app.get('/auth/steam/return',
 		res.redirect('/');
 	});
 
-app.listen(3000);
+app.listen(process.env.PORT || config.port);
