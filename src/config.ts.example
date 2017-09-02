@@ -1,4 +1,5 @@
 const config = {
-	"amqpUrl": "amqp://guest:guest@localhost/"
+	"amqpUrl": "amqp://guest:guest@localhost/",
+	"mongoUrl": "mongodb://localhost/moonhack_core",
 };
 export {config};
