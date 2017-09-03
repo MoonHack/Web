@@ -7,10 +7,12 @@ import * as express from 'express';
 import * as Bluebird from 'bluebird';
 import { config } from './config';
 import { json as jsonBodyParser } from 'body-parser';
+import * as cookieParser from 'cookie-parser';
 import * as expressWs from 'express-ws';
-import * as WebSocket from 'ws';
+import * as session from 'express-session';
 import { connection } from './amqp';
 import { v4 as uuidv4 } from 'uuid';
+import { run } from './runner';
 
 mongoose.connect(config.mongoUrl, {
 	useMongoClient: true,
@@ -66,7 +68,13 @@ passport.use(new SteamStrategy({
 	})
 );
 
+app.use(cookieParser());
 app.use(jsonBodyParser());
+app.use(session({
+	secret: config.sessionSecret,
+	resave: false,
+	saveUninitialized: false,
+}));
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -84,17 +92,36 @@ app.get('/',
 			return;
 		}
 		res.sendFile('/views/index.html');
-
 	});
 
-function sendObject(ws: WebSocket, obj: any): void {
-	ws.send(JSON.stringify(obj));
-}
+app.post('/api/v1/run',
+	(req, res) => {
+		if (!req.isAuthenticated()) {
+			res.sendStatus(401);
+			res.end();
+			return;
+		}
+
+		const username = req.body.username;
+		const script = req.body.script;
+		const args = req.body.args ? JSON.stringify(req.body.args) : '';
+		if (!username || !script) {
+			res.sendStatus(400);
+			res.end();
+			return;
+		}
+
+		run(username, script, args, res);
+	});
 
 app.ws('/api/v1/notifications',
 	(ws, req) => {
+		function sendObject(obj: any): void {
+			ws.send(JSON.stringify(obj));
+		}
+
 		if (!req.isAuthenticated()) {
-			sendObject(ws, {
+			sendObject({
 				ok: false,
 				error: 'Unauthorized',
 			});
@@ -113,13 +140,13 @@ app.ws('/api/v1/notifications',
 			const username = data.toString();
 			close();
 			if (!canAccountUseUser(req, username)) {
-				sendObject(ws, {
+				sendObject({
 					ok: false,
 					error: 'Unauthorized',
 				});
 				return;
 			}
-			sendObject(ws, {
+			sendObject({
 				ok: true,
 			});
 			const q = connection.declareQueue(

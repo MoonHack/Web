@@ -4,8 +4,8 @@ import { v4 as uuidv4 } from 'uuid';
 import Bluebird = require('bluebird');
 import { connection } from './amqp';
 
-export interface WriteFlushable extends Writable {
-	flush(): void;
+export interface RunnerWriter extends Writable {
+	//flush(): void;
 }
 
 const workQueue = connection.declareQueue('moonhack_command_jobs', {
@@ -39,7 +39,7 @@ function encodeToMSG(run_id: string,
 export function run(caller: string,
 					script: string,
 					args: string,
-					out: WriteFlushable): Bluebird<void> {
+					out: RunnerWriter): Bluebird<void> {
 	const run_id = uuidv4();
 	const msg = encodeToMSG(run_id, caller, script, args);
 	const replyQueue = connection.declareQueue(`moonhack_command_results_${run_id}`, {
@@ -64,7 +64,7 @@ export function run(caller: string,
 				stopConsumer();
 				return;
 			}
-			out.flush();
+			//out.flush();
 		}, {
 			noAck: true,
 		});

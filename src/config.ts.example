@@ -2,5 +2,6 @@ export const config = {
 	"amqpUrl": "amqp://guest:guest@localhost/",
 	"mongoUrl": "mongodb://localhost/moonhack_core",
 	"publicUrl": "http://localhost:3000/",
+	"sessionSecret": "meow",
 	"port": 3000,
 };
