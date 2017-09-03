@@ -1,5 +1,6 @@
 import * as Amqp from 'amqp-ts';
 import { Account, AccountModel } from './models/account';
+import {  User, UserModel } from './models/user';
 import * as passport from 'passport';
 import * as mongoose from 'mongoose';
 import { Strategy as SteamStrategy } from 'passport-steam';
@@ -64,7 +65,8 @@ passport.use(new SteamStrategy({
 		})
 		.then(account => {
 			return done(null, account);
-		}).catch(done);
+		})
+		.catch(done);
 	})
 );
 
@@ -78,11 +80,17 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-function canAccountUseUser(req: Express.Request, username: string): Bluebird<boolean> {
-	if (!req || !username) {
-		return Bluebird.resolve(false);
+function canAccountUseUser(req: Express.Request, username: string): Promise<boolean> {
+	if (!req || !req.isAuthenticated() || !username) {
+		return Promise.resolve(false);
 	}
-	return Bluebird.resolve(true);
+	return User.findOne({
+		owner: req.user._id,
+		name: username,
+	})
+	.then(user => {
+		return !!user;
+	})
 }
 
 app.get('/',
@@ -122,6 +130,79 @@ app.post('/api/v1/run',
 		})
 	});
 
+app.get('/api/v1/users',
+	(req, res) => {
+		if (!req.isAuthenticated()) {
+			res.sendStatus(401);
+			res.end();
+			return;
+		}
+
+		User.find({
+			owner: req.user._id,
+		})
+		.then(users => {
+			(users as UserModel[]).forEach(user => {
+				res.write({
+					_id: user._id,
+					name: user.name,
+					retiredAt: user.retiredAt,
+				});
+			});
+			res.end();
+		});
+	});
+
+app.post('/api/v1/users',
+	(req, res) => {
+		if (!req.isAuthenticated()) {
+			res.sendStatus(401);
+			res.end();
+			return;
+		}
+
+		const user = new User({
+			owner: req.user._id,
+			name: req.body.username,
+		});
+		user.save()
+		.then(() => {
+			res.sendStatus(200);
+			res.end();
+		})
+		.catch(() => {
+			res.sendStatus(400);
+			res.end();
+		});
+	});
+
+app.delete('/api/v1/users',
+	(req, res) => {
+		if (!req.isAuthenticated()) {
+			res.sendStatus(401);
+			res.end();
+			return;
+		}
+		User.findOneAndUpdate({
+			owner: req.user._id,
+			name: req.body.username,
+			retiredAt: { $exists: false },
+		}, {
+			$set: {
+				retiredAt: new Date(),
+			},
+		})
+		.then(user => {
+			if (user) {
+				res.sendStatus(200);
+				res.end();
+			} else {
+				res.sendStatus(404);
+				res.end();
+			}
+		})
+	})
+
 app.ws('/api/v1/notifications',
 	(ws, req) => {
 		function sendObject(obj: any): void {
@@ -147,7 +228,9 @@ app.ws('/api/v1/notifications',
 		ws.on('message', (data) => {
 			const username = data.toString();
 			close();
-			canAccountUseUser(req,  username).then(allowed => {
+			
+			canAccountUseUser(req,  username)
+			.then(allowed => {
 				if (!allowed) {
 					sendObject({
 						ok: false,

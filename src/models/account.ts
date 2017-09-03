@@ -14,7 +14,7 @@ const accountLoginSchema = new Schema({
 
 accountLoginSchema.index({
 	id: 1,
-	provider: 1
+	provider: 1,
 }, { unique: true });
 
 const accountSchema = new Schema({
