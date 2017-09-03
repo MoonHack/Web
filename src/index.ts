@@ -78,11 +78,11 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-function canAccountUseUser(req: Express.Request, username: string): boolean {
+function canAccountUseUser(req: Express.Request, username: string): Bluebird<boolean> {
 	if (!req || !username) {
-		return false;
+		return Bluebird.resolve(false);
 	}
-	return true;
+	return Bluebird.resolve(true);
 }
 
 app.get('/',
@@ -111,7 +111,15 @@ app.post('/api/v1/run',
 			return;
 		}
 
-		run(username, script, args, res);
+		canAccountUseUser(req, username)
+		.then(allowed => {
+			if (!allowed) {
+				res.sendStatus(403);
+				res.end();
+				return;
+			}
+			return run(username, script, args, res);
+		})
 	});
 
 app.ws('/api/v1/notifications',
@@ -139,30 +147,33 @@ app.ws('/api/v1/notifications',
 		ws.on('message', (data) => {
 			const username = data.toString();
 			close();
-			if (!canAccountUseUser(req, username)) {
-				sendObject({
-					ok: false,
-					error: 'Unauthorized',
-				});
-				return;
-			}
-			sendObject({
-				ok: true,
-			});
-			const q = connection.declareQueue(
-				`moonhack_notification_listener_${uuidv4()}`,
-				{
-					exclusive: true,
+			canAccountUseUser(req,  username).then(allowed => {
+				if (!allowed) {
+					sendObject({
+						ok: false,
+						error: 'Unauthorized',
+					});
+					return;
 				}
-			);
-			queue = q;
-			connection.completeConfiguration()
-			.then(() => q.bind(notificationExchange, username))
-			.then(() => q.activateConsumer((message) => {
-				ws.send(message.content.toString('utf8'));
-			}, {
-				noAck: true,
-			}));
+
+				sendObject({
+					ok: true,
+				});
+				const q = connection.declareQueue(
+					`moonhack_notification_listener_${uuidv4()}`,
+					{
+						exclusive: true,
+					}
+				);
+				queue = q;
+				connection.completeConfiguration()
+				.then(() => q.bind(notificationExchange, username))
+				.then(() => q.activateConsumer((message) => {
+					ws.send(message.content.toString('utf8'));
+				}, {
+					noAck: true,
+				}));
+			});
 		});
 
 		ws.on('close', close);
