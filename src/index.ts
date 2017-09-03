@@ -14,6 +14,7 @@ import * as session from 'express-session';
 import { connection } from './amqp';
 import { v4 as uuidv4 } from 'uuid';
 import { run } from './runner';
+import * as path from 'path';
 
 mongoose.connect(config.mongoUrl, {
 	useMongoClient: true,
@@ -87,6 +88,7 @@ function canAccountUseUser(req: Express.Request, username: string): Promise<bool
 	return User.findOne({
 		owner: req.user._id,
 		name: username,
+		retiredAt: { $exists: false },
 	})
 	.then(user => {
 		return !!user;
@@ -96,10 +98,10 @@ function canAccountUseUser(req: Express.Request, username: string): Promise<bool
 app.get('/',
 	(req, res) => {
 		if (!req.isAuthenticated()) {
-			res.sendFile('/views/auth.html');
+			res.sendFile(path.resolve('views/auth.html'));
 			return;
 		}
-		res.sendFile('/views/index.html');
+		res.sendFile(path.resolve('views/index.html'));
 	});
 
 app.post('/api/v1/run',
@@ -108,12 +110,12 @@ app.post('/api/v1/run',
 			res.sendStatus(401);
 			res.end();
 			return;
-		}
+		};
 
 		const username = req.body.username;
 		const script = req.body.script;
-		const args = req.body.args ? JSON.stringify(req.body.args) : '';
-		if (!username || !script) {
+		const args = req.body.args || '';
+		if (!username || !script || (args.length > 0 && args[0] !== '{')) {
 			res.sendStatus(400);
 			res.end();
 			return;
@@ -142,13 +144,16 @@ app.get('/api/v1/users',
 			owner: req.user._id,
 		})
 		.then(users => {
-			(users as UserModel[]).forEach(user => {
-				res.write({
+			return (users as UserModel[]).map(user => {
+				return {
 					_id: user._id,
 					name: user.name,
 					retiredAt: user.retiredAt,
-				});
+				};
 			});
+		})
+		.then(users => {
+			res.write(JSON.stringify(users));
 			res.end();
 		});
 	});
@@ -234,7 +239,7 @@ app.ws('/api/v1/notifications',
 				if (!allowed) {
 					sendObject({
 						ok: false,
-						error: 'Unauthorized',
+						error: 'Forbidden',
 					});
 					return;
 				}
@@ -278,3 +283,4 @@ app.get('/api/v1/auth/steam/return',
 app.use('/static', express.static('static'));
 
 app.listen(process.env.PORT || config.port);
+console.log('App listening');

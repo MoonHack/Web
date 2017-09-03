@@ -1,0 +1,94 @@
+* {
+	font-family: white_rabbitregular;
+	line-height: 16px;
+	color: rgb(119, 174, 238);
+	background-color: rgb(16, 18, 21);
+	padding: 0;
+	margin: 0;
+	overflow: hidden;
+}
+body, html {
+	width: 100%;
+	height: 100%;
+}
+td {
+	vertical-align: top;
+}
+.nowrap {
+	white-space: nowrap;
+}
+#shellContentContainer {
+	height: calc(100% - 58px);
+	max-height: calc(100% - 58px);
+	padding: 9px;
+	padding-bottom: 0;
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: calc(100% - 18px);
+}
+
+#shellContent {
+	overflow-y: scroll;
+	white-space: pre-wrap;
+	width: 100%;
+	height: 100%;
+}
+
+#shellInputContainer {
+	padding: 9px;
+	padding-top: 0;
+	color: white;
+	position: absolute;
+	left: 0;
+	bottom: 0;
+	width: calc(100% - 18px);
+}
+#shellInput {
+	color: white;
+	margin: 0;
+	font-size: 16px;
+	border: 0;
+	width: 100%;
+}
+#shellInputContainer hr {
+	border: none;
+	padding-top: 1px;
+	padding-bottom: 1px;
+	border-top: 2px solid rgb(119, 174, 238);
+}
+#shellInputLine {
+	width: 100%;
+	display: table;
+}
+#shellInputLine > span {
+	width: 1px;
+}
+#shellInputLine > * {
+	display: table-cell;
+}
+
+::-webkit-scrollbar {
+    width: 18px;
+}
+
+::-webkit-scrollbar-track {
+	background-color: rgb(33,50,71);
+	border-left: 9px solid rgb(16, 18, 21);
+}
+
+::-webkit-scrollbar-thumb {
+	background-color: rgb(64,105,151); 
+	border-left: 9px solid rgb(16, 18, 21);
+}
+
+@font-face{
+	font-family: 'white_rabbitregular';
+	src: url(whiterabbit-webfont.eot);
+	src: url(whiterabbit-webfont.eot?#iefix) format("embedded-opentype"),
+	url(whiterabbit-webfont.woff2) format("woff2"),
+	url(whiterabbit-webfont.woff) format("woff"),
+	url(whiterabbit-webfont.ttf) format("truetype");
+	font-weight: normal;
+	font-style: normal;
+}
