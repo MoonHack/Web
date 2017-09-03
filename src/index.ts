@@ -70,7 +70,7 @@ app.use(jsonBodyParser());
 app.use(passport.initialize());
 app.use(passport.session());
 
-function canAccountUseUser(req: Request, username: string): boolean {
+function canAccountUseUser(req: Express.Request, username: string): boolean {
 	if (!req || !username) {
 		return false;
 	}
@@ -112,7 +112,7 @@ app.ws('/api/v1/notifications',
 		ws.on('message', (data) => {
 			const username = data.toString();
 			close();
-			if (!canAccountUseUser) {
+			if (!canAccountUseUser(req, username)) {
 				sendObject(ws, {
 					ok: false,
 					error: 'Unauthorized',
