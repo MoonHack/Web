@@ -15,13 +15,17 @@ const accountLoginSchema = new Schema({
 accountLoginSchema.index({
 	id: 1,
 	provider: 1,
-}, { unique: true });
+}, {
+	unique: true,
+});
 
 const accountSchema = new Schema({
 	login: {
 		type: accountLoginSchema,
 		unique: true,
-	}
-}, { timestamps: true });
+	},
+}, {
+	timestamps: true,
+});
 
 export const Account = model('accounts', accountSchema);

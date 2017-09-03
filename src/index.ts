@@ -92,7 +92,7 @@ function canAccountUseUser(req: Express.Request, username: string): Promise<bool
 	})
 	.then(user => {
 		return !!user;
-	})
+	});
 }
 
 app.get('/',

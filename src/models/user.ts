@@ -17,10 +17,14 @@ const userSchema = new Schema({
 
 userSchema.index({
 	name: 1,
-}, { unique: true });
+}, {
+	unique: true,
+});
 
 userSchema.index({
 	retiredAt: 1,
+}, {
+	sparse: true,
 });
 
 export const User = model('users', userSchema);
