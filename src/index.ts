@@ -1,12 +1,12 @@
 import { Account, AccountModel } from './models/account';
-import * as passport from 'passport';;
+import * as passport from 'passport';
 import * as mongoose from 'mongoose';
 import { Strategy as SteamStrategy } from 'passport-steam';
 import * as express from 'express';
 import * as Bluebird from 'bluebird';
 import { config } from './config';
 import { json as jsonBodyParser } from 'body-parser';
-//import * as expressWs from 'express-ws';
+import * as expressWs from 'express-ws';
 
 mongoose.connect(config.mongoUrl, {
 	useMongoClient: true,
@@ -14,6 +14,7 @@ mongoose.connect(config.mongoUrl, {
 (<any>mongoose).Promise = Bluebird; // mongoose wants this!
 
 const app = express();
+expressWs(app);
 
 passport.serializeUser<AccountModel, mongoose.Schema.Types.ObjectId>((account, done) => {
 	done(null, account._id);
@@ -64,6 +65,16 @@ app.get('/',
 			return;
 		}
 		res.sendFile('/views/index.html');
+	});
+
+app.ws('/api/v1/notifications',
+	(ws, req) => {
+		if (!req.isAuthenticated()) {
+			//res.sendStatus(401);
+			//res.end();
+			ws.close();
+			return;
+		}
 	});
 
 app.get('/api/v1/auth/steam',
