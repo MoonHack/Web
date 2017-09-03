@@ -1,3 +1,4 @@
+import * as Amqp from 'amqp-ts';
 import { Account, AccountModel } from './models/account';
 import * as passport from 'passport';
 import * as mongoose from 'mongoose';
@@ -7,6 +8,9 @@ import * as Bluebird from 'bluebird';
 import { config } from './config';
 import { json as jsonBodyParser } from 'body-parser';
 import * as expressWs from 'express-ws';
+import * as WebSocket from 'ws';
+import { connection } from './amqp';
+import { v4 as uuidv4 } from 'uuid';
 
 mongoose.connect(config.mongoUrl, {
 	useMongoClient: true,
@@ -15,6 +19,14 @@ mongoose.connect(config.mongoUrl, {
 
 const app = express();
 expressWs(app);
+
+const notificationExchange = connection.declareExchange(
+	"moonhack_notifications",
+	"topic",
+	{
+		durable: true,
+	}
+);
 
 passport.serializeUser<AccountModel, mongoose.Schema.Types.ObjectId>((account, done) => {
 	done(null, account._id);
@@ -65,16 +77,52 @@ app.get('/',
 			return;
 		}
 		res.sendFile('/views/index.html');
+
 	});
+
+function sendObject(ws: WebSocket, obj: any): void {
+	ws.send(JSON.stringify(obj));
+}
 
 app.ws('/api/v1/notifications',
 	(ws, req) => {
 		if (!req.isAuthenticated()) {
-			//res.sendStatus(401);
-			//res.end();
+			sendObject(ws, {
+				ok: false,
+				error: 'Unauthorized',
+			});
 			ws.close();
 			return;
 		}
+
+		let queue: Amqp.Queue|undefined = undefined;
+		function close() {
+			if (queue) {
+				queue.close();
+				queue = undefined;
+			}
+		}
+		ws.on('message', (data) => {
+			const username = data.toString();
+			close();
+			const q = connection.declareQueue(
+				`moonhack_notification_listener_${uuidv4()}`,
+				{
+					exclusive: true,
+				}
+			);
+			queue = q;
+			connection.completeConfiguration()
+			.then(() => q.bind(notificationExchange, username))
+			.then(() => q.activateConsumer((message) => {
+				ws.send(message.content.toString('utf8'));
+			}, {
+				noAck: true,
+			}));
+		});
+
+		ws.on('close', close);
+		ws.on('error', close);
 	});
 
 app.get('/api/v1/auth/steam',

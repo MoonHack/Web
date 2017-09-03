@@ -2,13 +2,12 @@ import * as Amqp from 'amqp-ts';
 import { Writable } from 'stream';
 import { v4 as uuidv4 } from 'uuid';
 import Bluebird = require('bluebird');
-import { config } from './config';
+import { connection } from './amqp';
 
 export interface WriteFlushable extends Writable {
 	flush(): void;
 }
 
-const connection = new Amqp.Connection(config.amqpUrl);
 const workQueue = connection.declareQueue('moonhack_command_jobs', {
 	arguments: {
 		'x-message-ttl': 30000,
