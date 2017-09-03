@@ -70,6 +70,13 @@ app.use(jsonBodyParser());
 app.use(passport.initialize());
 app.use(passport.session());
 
+function canAccountUseUser(req: Request, username: string): boolean {
+	if (!req || !username) {
+		return false;
+	}
+	return true;
+}
+
 app.get('/',
 	(req, res) => {
 		if (!req.isAuthenticated()) {
@@ -105,6 +112,16 @@ app.ws('/api/v1/notifications',
 		ws.on('message', (data) => {
 			const username = data.toString();
 			close();
+			if (!canAccountUseUser) {
+				sendObject(ws, {
+					ok: false,
+					error: 'Unauthorized',
+				});
+				return;
+			}
+			sendObject(ws, {
+				ok: true,
+			});
 			const q = connection.declareQueue(
 				`moonhack_notification_listener_${uuidv4()}`,
 				{
