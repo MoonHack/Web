@@ -1,5 +1,5 @@
 import * as Amqp from 'amqp-ts';
-import { Account, AccountModel } from './models/account';
+import { Account } from './models/account';
 import {  User, UserModel } from './models/user';
 import * as passport from 'passport';
 import * as mongoose from 'mongoose';
@@ -32,16 +32,6 @@ const notificationExchange = connection.declareExchange(
 	}
 );
 
-passport.serializeUser<AccountModel, mongoose.Schema.Types.ObjectId>((account, done) => {
-	done(null, account._id);
-});
-
-passport.deserializeUser<AccountModel, mongoose.Schema.Types.ObjectId>((obj, done) => {
-	Account.findById(obj).then(account => {
-		done(null, account as AccountModel);
-	}).catch(done);
-});
-
 passport.use(new SteamStrategy({
 		returnURL: `${config.publicUrl}api/v1/auth/steam/return`,
 		realm: config.publicUrl,
@@ -65,7 +55,7 @@ passport.use(new SteamStrategy({
 			return account.save();
 		})
 		.then(account => {
-			return done(null, account);
+			return done(null, account._id);
 		})
 		.catch(done);
 	})
@@ -86,7 +76,7 @@ function canAccountUseUser(req: Express.Request, username: string): Promise<bool
 		return Promise.resolve(false);
 	}
 	return User.findOne({
-		owner: req.user._id,
+		owner: req.user,
 		name: username,
 		retiredAt: { $exists: false },
 	})
@@ -141,12 +131,12 @@ app.get('/api/v1/users',
 		}
 
 		User.find({
-			owner: req.user._id,
+			owner: req.user,
 		})
 		.then(users => {
 			return (users as UserModel[]).map(user => {
 				return {
-					_id: user._id,
+					_id: user,
 					name: user.name,
 					retiredAt: user.retiredAt,
 				};
@@ -167,7 +157,7 @@ app.post('/api/v1/users',
 		}
 
 		const user = new User({
-			owner: req.user._id,
+			owner: req.user,
 			name: req.body.username,
 		});
 		user.save()
@@ -189,7 +179,7 @@ app.delete('/api/v1/users',
 			return;
 		}
 		User.findOneAndUpdate({
-			owner: req.user._id,
+			owner: req.user,
 			name: req.body.username,
 			retiredAt: { $exists: false },
 		}, {
