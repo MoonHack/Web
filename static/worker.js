@@ -1,7 +1,7 @@
 'use strict';
 
 let ws, host, user, canRunCommand;
-canRunCommand = true;
+canRunCommand = false;
 
 function sendRequest(method, url, data, cb) {
 	const xhr = new XMLHttpRequest();
@@ -29,7 +29,9 @@ function sendCommand(cmd, args) {
 		username: user,
 		script: cmd,
 		args: args,
-	}, () => { canRunCommand = true; });
+	}, () => {
+		canRunCommand = true;
+	});
 	let lastProgress = 0;
 	let buffer = '';
 	function handleProgress(pe) {
@@ -50,39 +52,83 @@ function sendCommand(cmd, args) {
 	xhr.onloadend = handleProgress;
 }
 
+function connectWs() {
+	ws = new WebSocket('ws://' + host + '/api/v1/notifications');
+	
+	ws.onmessage = _msg => {
+		const msg = JSON.parse(_msg.data);
+		switch (msg.type) {
+			case 'result':
+				switch (msg.command) {
+					case 'userswitch':
+						if (!msg.ok) {
+							addContent('Error switching user to ' + msg.user + ': ' + msg.error);
+							if (user === msg.user) {
+								user = null;
+							}
+						} else {
+							addContent('Switched user to ' + msg.user);
+							user = msg.user;
+						}
+						canRunCommand = true;
+						break;
+					case 'connect':
+						if (!msg.ok) {
+							addContent('Error connecting MoonHack: ' + msg.error);
+						} else {
+							addContent('Connected to MoonHack');
+							if (user) {
+								ws.send(user);
+							} else {
+								listUsers();
+							}
+						}
+						break;
+				}
+				break;
+		}
+	};
+
+	ws.onopen = () => {
+		addContent('Connection to MoonHack initialized');
+	};
+
+	ws.onclose = e => {
+		canRunCommand = false;
+		addContent('Connection to MoonHack closed: ' + e.code);
+		setTimeout(connectWs, 2000);
+	};
+
+	ws.onerror = e => {
+		canRunCommand = false;
+		addContent('Connection to MoonHack errored: ' + e);
+		setTimeout(connectWs, 2000);
+	};
+}
+
+function listUsers() {
+	sendRequest('get', '/api/v1/users', null, xhr => {
+		addContent(xhr.responseText);
+		canRunCommand = true;
+	});
+}
+
 onmessage = msg => {
 	msg = msg.data;
 	switch (msg[0]) {
 		case 'init':
 			host = msg[1];
-			ws = new WebSocket('ws://' + host + '/api/v1/notifications');
-
-			ws.onmessage = _msg => {
-				addContent(_msg.data.toString());
-			};
-
-			ws.onopen = () => {
-				addContent('OPENED');
-			};
-
-			ws.onclose = e => {
-				addContent('CLOSED: ' + e.code);
-			};
-
-			ws.onerror = () => {
-				addContent('ERROR');
-			};
+			connectWs();
 			break;
 		case 'user':
-			user = msg[1];
-			ws.send(user);
+			canRunCommand = false;
+			ws.send(msg[1]);
 			break;
 		case 'lsuser':
-			sendRequest('get', '/api/v1/users', null, xhr => {
-				addContent(xhr.responseText);
-			});
+			listUsers();
 			break;
 		case 'mkuser':
+			canRunCommand = false;
 			sendRequest('post', '/api/v1/users', {
 				username: msg[1]
 			}, xhr => {
@@ -91,9 +137,11 @@ onmessage = msg => {
 				} else {
 					addContent("could not create user");
 				}
+				canRunCommand = true;
 			});
 			break;
 		case 'rmuser':
+			canRunCommand = false;
 			sendRequest('delete', '/api/v1/users', {
 				username: msg[1]
 			}, xhr => {
@@ -102,6 +150,7 @@ onmessage = msg => {
 				} else {
 					addContent("could not retired user");
 				}
+				canRunCommand = true;
 			});
 			break;
 		case 'command':
@@ -109,6 +158,7 @@ onmessage = msg => {
 				addContent("please select a user first");
 				return;
 			}
+			canRunCommand = false;
 			sendCommand(msg[1], msg[2]);
 			break;
 	}

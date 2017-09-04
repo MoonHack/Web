@@ -225,6 +225,12 @@ app.ws('/api/v1/notifications',
 			return;
 		}
 
+		sendObject({
+			type: 'result',
+			command: 'connect',
+			ok: true,
+		});
+
 		let queue: Amqp.Queue|undefined = undefined;
 		function close() {
 			if (queue) {
@@ -250,7 +256,10 @@ app.ws('/api/v1/notifications',
 				}
 
 				sendObject({
+					type: 'result',
+					command: 'userswitch',
 					ok: true,
+					user: username,
 				});
 				const q = connection.declareQueue(
 					`moonhack_notification_listener_${uuidv4()}`,
