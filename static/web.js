@@ -21,6 +21,9 @@ function initialize() {
 			case 'init':
 				worker.postMessage(['init', document.location.host]);
 				break;
+			case 'reload':
+				document.location.reload();
+				break;
 		}
 	};
 

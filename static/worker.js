@@ -74,7 +74,9 @@ function connectWs() {
 						break;
 					case 'connect':
 						if (!msg.ok) {
-							addContent('Error connecting MoonHack: ' + msg.error);
+							//addContent('Error connecting MoonHack: ' + msg.error);
+							//document.location.refresh();
+							postMessage(['reload']);
 						} else {
 							addContent('Connected to MoonHack');
 							if (user) {
