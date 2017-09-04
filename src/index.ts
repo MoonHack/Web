@@ -278,15 +278,23 @@ app.ws('/api/v1/notifications',
 		})(req as any, null as any, null as any);
 	});
 
+function signReqJwt(req: any, res: any) {
+	res.cookie('jwt', signJwt({
+		id: req.user,
+	}, config.sessionSecret, {
+		expiresIn: '1 hour',
+	}), {
+		maxAge: 1 * 60 * 60 * 1000,
+		signed: false,
+		httpOnly: true,
+	});
+}
+
 app.post('/api/v1/auth/refresh',
 	passport.authenticate('jwt'),
 	(req, res) => {
-		res.cookie('jwt', signJwt({
-			id: req.user,
-		}, config.sessionSecret, {
-			expiresIn: '1 hour',
-		}));
-		res.end();	
+		signReqJwt(req, res);
+		res.end();
 	});
 
 app.get('/api/v1/auth/steam',
@@ -298,11 +306,7 @@ app.get('/api/v1/auth/steam',
 app.get('/api/v1/auth/steam/return',
 	passport.authenticate('steam', { failureRedirect: '/' }),
 	(req, res) => {
-		res.cookie('jwt', signJwt({
-			id: req.user,
-		}, config.sessionSecret, {
-			expiresIn: '1 hour',
-		}));
+		signReqJwt(req, res);
 		res.redirect('/');
 	});
 
