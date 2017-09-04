@@ -216,8 +216,10 @@ app.ws('/api/v1/notifications',
 
 		if (!req.isAuthenticated()) {
 			sendObject({
+				type: 'result',
+				command: 'connect',
 				ok: false,
-				error: 'Unauthorized',
+				error: 'Forbidden',
 			});
 			ws.close();
 			return;
@@ -238,7 +240,10 @@ app.ws('/api/v1/notifications',
 			.then(allowed => {
 				if (!allowed) {
 					sendObject({
+						type: 'result',
+						command: 'userswitch',
 						ok: false,
+						user: username,
 						error: 'Forbidden',
 					});
 					return;
@@ -257,7 +262,11 @@ app.ws('/api/v1/notifications',
 				connection.completeConfiguration()
 				.then(() => q.bind(notificationExchange, username))
 				.then(() => q.activateConsumer((message) => {
-					ws.send(message.content.toString('utf8'));
+					sendObject({
+						type: 'notification',
+						user: username,
+						data: message.content.toString('utf8')
+					});
 				}, {
 					noAck: true,
 				}));
