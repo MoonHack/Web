@@ -9,12 +9,13 @@ import * as Bluebird from 'bluebird';
 import { config } from './config';
 import { json as jsonBodyParser } from 'body-parser';
 import * as cookieParser from 'cookie-parser';
+import { Strategy as JWTStrategy } from 'passport-jwt';
 import * as expressWs from 'express-ws';
-import * as session from 'express-session';
 import { connection } from './amqp';
 import { v4 as uuidv4 } from 'uuid';
 import { run } from './runner';
 import * as path from 'path';
+import { sign as signJwt } from 'jsonwebtoken';
 
 mongoose.connect(config.mongoUrl, {
 	useMongoClient: true,
@@ -23,6 +24,14 @@ mongoose.connect(config.mongoUrl, {
 
 const app = express();
 expressWs(app);
+
+passport.serializeUser((user, done) => {
+	done(null, user);
+});
+
+passport.deserializeUser((obj, done) => {
+	done(null, obj);
+});
 
 const notificationExchange = connection.declareExchange(
 	"moonhack_notifications",
@@ -61,15 +70,21 @@ passport.use(new SteamStrategy({
 	})
 );
 
+passport.use(new JWTStrategy({
+	secretOrKey: config.sessionSecret,
+	jwtFromRequest: (req: any) => {
+		if (req.cookies && req.cookies.jwt) {
+			return req.cookies.jwt;
+		}
+		return null;
+	},
+}, (id, done) => {
+	done(null, id.id);
+}));
+
 app.use(cookieParser());
 app.use(jsonBodyParser());
-app.use(session({
-	secret: config.sessionSecret,
-	resave: false,
-	saveUninitialized: false,
-}));
 app.use(passport.initialize());
-app.use(passport.session());
 
 function canAccountUseUser(req: Express.Request, username: string): Promise<boolean> {
 	if (!req || !req.isAuthenticated() || !username) {
@@ -86,22 +101,19 @@ function canAccountUseUser(req: Express.Request, username: string): Promise<bool
 }
 
 app.get('/',
-	(req, res) => {
-		if (!req.isAuthenticated()) {
-			res.sendFile(path.resolve('views/auth.html'));
-			return;
-		}
-		res.sendFile(path.resolve('views/index.html'));
+	(req, res, next) => {
+		passport.authenticate('jwt', (err: any,  user: any) => {
+			if (err || !user) {
+				res.sendFile(path.resolve('views/auth.html'));
+				return;
+			}
+			res.sendFile(path.resolve('views/index.html'));
+		})(req, res, next);
 	});
 
 app.post('/api/v1/run',
+	passport.authenticate('jwt'),
 	(req, res) => {
-		if (!req.isAuthenticated()) {
-			res.sendStatus(401);
-			res.end();
-			return;
-		};
-
 		const username = req.body.username;
 		const script = req.body.script;
 		const args = req.body.args || '';
@@ -123,20 +135,15 @@ app.post('/api/v1/run',
 	});
 
 app.get('/api/v1/users',
+	passport.authenticate('jwt'),
 	(req, res) => {
-		if (!req.isAuthenticated()) {
-			res.sendStatus(401);
-			res.end();
-			return;
-		}
-
 		User.find({
 			owner: req.user,
 		})
 		.then(users => {
 			return (users as UserModel[]).map(user => {
 				return {
-					_id: user,
+					_id: user._id,
 					name: user.name,
 					retiredAt: user.retiredAt,
 				};
@@ -149,13 +156,8 @@ app.get('/api/v1/users',
 	});
 
 app.post('/api/v1/users',
+	passport.authenticate('jwt'),
 	(req, res) => {
-		if (!req.isAuthenticated()) {
-			res.sendStatus(401);
-			res.end();
-			return;
-		}
-
 		const user = new User({
 			owner: req.user,
 			name: req.body.username,
@@ -172,12 +174,8 @@ app.post('/api/v1/users',
 	});
 
 app.delete('/api/v1/users',
+	passport.authenticate('jwt'),
 	(req, res) => {
-		if (!req.isAuthenticated()) {
-			res.sendStatus(401);
-			res.end();
-			return;
-		}
 		User.findOneAndUpdate({
 			owner: req.user,
 			name: req.body.username,
@@ -200,80 +198,95 @@ app.delete('/api/v1/users',
 
 app.ws('/api/v1/notifications',
 	(ws, req) => {
-		function sendObject(obj: any): void {
-			ws.send(JSON.stringify(obj));
-		}
+		passport.authenticate('jwt', (err: any, account: any) => {
+			function sendObject(obj: any): void {
+				ws.send(JSON.stringify(obj));
+			}
+			req.user = account;
 
-		if (!req.isAuthenticated()) {
+			if (err || !account) {
+				sendObject({
+					type: 'result',
+					command: 'connect',
+					ok: false,
+					error: 'Forbidden',
+				});
+				ws.close();
+				return;
+			}
+
 			sendObject({
 				type: 'result',
 				command: 'connect',
-				ok: false,
-				error: 'Forbidden',
+				ok: true,
 			});
-			ws.close();
-			return;
-		}
 
-		sendObject({
-			type: 'result',
-			command: 'connect',
-			ok: true,
-		});
-
-		let queue: Amqp.Queue|undefined = undefined;
-		function close() {
-			if (queue) {
-				queue.close();
-				queue = undefined;
+			let queue: Amqp.Queue|undefined = undefined;
+			function close() {
+				if (queue) {
+					queue.close();
+					queue = undefined;
+				}
 			}
-		}
-		ws.on('message', (data) => {
-			const username = data.toString();
-			close();
-			
-			canAccountUseUser(req,  username)
-			.then(allowed => {
-				if (!allowed) {
+			ws.on('message', (data) => {
+				const username = data.toString();
+				close();
+				
+				canAccountUseUser(req,  username)
+				.then(allowed => {
+					if (!allowed) {
+						sendObject({
+							type: 'result',
+							command: 'userswitch',
+							ok: false,
+							user: username,
+							error: 'Forbidden',
+						});
+						return;
+					}
+
 					sendObject({
 						type: 'result',
 						command: 'userswitch',
-						ok: false,
+						ok: true,
 						user: username,
-						error: 'Forbidden',
 					});
-					return;
-				}
-
-				sendObject({
-					type: 'result',
-					command: 'userswitch',
-					ok: true,
-					user: username,
+					const q = connection.declareQueue(
+						`moonhack_notification_listener_${uuidv4()}`,
+						{
+							exclusive: true,
+						}
+					);
+					queue = q;
+					connection.completeConfiguration()
+					.then(() => q.bind(notificationExchange, username))
+					.then(() => q.activateConsumer((message) => {
+						sendObject({
+							type: 'notification',
+							user: username,
+							data: message.content.toString('utf8')
+						});
+					}, {
+						noAck: true,
+					}));
 				});
-				const q = connection.declareQueue(
-					`moonhack_notification_listener_${uuidv4()}`,
-					{
-						exclusive: true,
-					}
-				);
-				queue = q;
-				connection.completeConfiguration()
-				.then(() => q.bind(notificationExchange, username))
-				.then(() => q.activateConsumer((message) => {
-					sendObject({
-						type: 'notification',
-						user: username,
-						data: message.content.toString('utf8')
-					});
-				}, {
-					noAck: true,
-				}));
 			});
-		});
 
-		ws.on('close', close);
-		ws.on('error', close);
+			ws.on('close', close);
+			ws.on('error', close);
+
+		})(req as any, null as any, null as any);
+	});
+
+app.post('/api/v1/auth/refresh',
+	passport.authenticate('jwt'),
+	(req, res) => {
+		res.cookie('jwt', signJwt({
+			id: req.user,
+		}, config.sessionSecret, {
+			expiresIn: '1 hour',
+		}));
+		res.end();	
 	});
 
 app.get('/api/v1/auth/steam',
@@ -284,7 +297,12 @@ app.get('/api/v1/auth/steam',
 
 app.get('/api/v1/auth/steam/return',
 	passport.authenticate('steam', { failureRedirect: '/' }),
-	(_req, res) => {
+	(req, res) => {
+		res.cookie('jwt', signJwt({
+			id: req.user,
+		}, config.sessionSecret, {
+			expiresIn: '1 hour',
+		}));
 		res.redirect('/');
 	});
 
