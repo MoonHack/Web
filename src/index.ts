@@ -355,7 +355,7 @@ app.post('/api/v1/auth/kill',
 			_id: req.user.id,
 		}, {
 			$set: {
-				miniat: Math.ceil(Date.now() / 1000) + 1,
+				miniat: Math.ceil(Date.now() / 1000) + 10,
 			},
 		});
 		res.end();
