@@ -1,5 +1,5 @@
 import * as Amqp from 'amqp-ts';
-import { Account } from './models/account';
+import { Account, AccountModel } from './models/account';
 import {  User, UserModel } from './models/user';
 import * as passport from 'passport';
 import * as mongoose from 'mongoose';
@@ -41,26 +41,48 @@ const notificationExchange = connection.declareExchange(
 	}
 );
 
-function signReqJwt(req: any, res: any): Promise<void> {
-	return User.find({
-		owner: req.user.id,
-		retiredAt: { $exists: false },
-	})
-	.then(users => {
-		return (users as UserModel[]).map(user => {
-			return user.name;
-		});
-	})
-	.then(userIds => {
-		res.cookie('jwt', signJwt({
-			id: req.user.id,
-			users: userIds,
-		}, config.sessionSecret, {
-			expiresIn: '1 hour',
-		}), {
-			maxAge: 1 * 60 * 60 * 1000,
+function signReqJwt(req: any, res: any): Promise<boolean> {
+	if (!req.user) {
+		res.cookie('jwt', '', {
+			maxAge: 0,
 			signed: false,
 			httpOnly: true,
+		});
+		return Promise.resolve(false);
+	}
+	return Account.findOne({
+		_id: req.user.id,
+	}, {
+		securityId: 1,
+	})
+	.then(account => {
+		if ((account as AccountModel).securityId !== req.user.securityId) {
+			res.cookie('jwt', '', {
+				maxAge: 0,
+				signed: false,
+				httpOnly: true,
+			});
+			return false;
+		}
+		return User.find({
+			owner: req.user.id,
+			retiredAt: { $exists: false },
+		}, {
+			name: 1,
+		})
+		.then(userNames => {
+			res.cookie('jwt', signJwt({
+				id: req.user.id,
+				securityId: req.user.securityId,
+				users: userNames.map(u => (u as UserModel).name),
+			}, config.sessionSecret, {
+				expiresIn: '1 hour',
+			}), {
+				maxAge: 1 * 60 * 60 * 1000,
+				signed: false,
+				httpOnly: true,
+			});
+			return true;
 		});
 	});
 }
@@ -74,6 +96,9 @@ passport.use(new SteamStrategy({
 		Account.findOne({
 			'login.id': id,
 			'login.provider': 'steam',
+		}, {
+			_id: 1,
+			securityId: 1,
 		})
 		.then(account => {
 			if (account) {
@@ -83,13 +108,15 @@ passport.use(new SteamStrategy({
 				login: {
 					id,
 					provider: 'steam',
-				}
+				},
+				securityId: uuidv4(),
 			});
 			return account.save();
 		})
 		.then(account => {
 			return done(null, {
-				id: account._id
+				id: account._id,
+				securityId: (account as AccountModel).securityId,
 			});
 		})
 		.catch(done);
@@ -303,7 +330,12 @@ app.post('/api/v1/auth/refresh',
 	passport.authenticate('jwt'),
 	(req, res) => {
 		signReqJwt(req, res)
-		.then(() => res.end());
+		.then(ok => {
+			if (!ok) {
+				res.sendStatus(401);
+			}
+			res.end();
+		});
 	});
 
 app.get('/api/v1/auth/steam',

@@ -4,7 +4,8 @@ export interface AccountModel extends Document {
 	login: {
 		id: string,
 		provider: string,
-	}
+	},
+	securityId: string,
 };
 
 const accountLoginSchema = new Schema({
@@ -24,6 +25,7 @@ const accountSchema = new Schema({
 		type: accountLoginSchema,
 		unique: true,
 	},
+	securityId: String,
 }, {
 	timestamps: true,
 });
