@@ -23,8 +23,8 @@ function sendRequest(method, url, data, cb) {
 	return xhr;
 }
 
-function refreshToken() {
-	sendRequest('post', '/api/v1/auth/refresh');
+function refreshToken(cb) {
+	sendRequest('post', '/api/v1/auth/refresh', null, cb);
 }
 setInterval(refreshToken, 30 * 60 * 1000);
 
@@ -86,7 +86,6 @@ function connectWs(_ws) {
 							postMessage(['reload']);
 						} else {
 							addContent('Connected to MoonHack');
-							refreshToken();
 							if (user) {
 								ws.send(user);
 							} else {
@@ -128,7 +127,7 @@ onmessage = msg => {
 	switch (msg[0]) {
 		case 'init':
 			host = msg[1];
-			connectWs();
+			refreshToken(() => connectWs());
 			break;
 		case 'user':
 			canRunCommand = false;
