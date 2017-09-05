@@ -57,11 +57,12 @@ function sendCommand(cmd, args) {
 	xhr.onloadend = handleProgress;
 }
 
-let isReconnecting = false;
-function connectWs() {
-	isReconnecting = false;
-
-	ws = new WebSocket('ws://' + host + '/api/v1/notifications');
+function connectWs(_ws) {
+	if (_ws && _ws !== ws) {
+		return;
+	}
+	_ws = new WebSocket('ws://' + host + '/api/v1/notifications');
+	ws = _ws;
 	
 	ws.onmessage = _msg => {
 		const msg = JSON.parse(_msg.data);
@@ -105,19 +106,13 @@ function connectWs() {
 	ws.onclose = e => {
 		canRunCommand = false;
 		addContent('Connection to MoonHack closed: ' + e.code);
-		if (!isReconnecting) {
-			isReconnecting = true;
-			setTimeout(connectWs, 2000);
-		}
+		setTimeout(() => connectWs(_ws), 2000);
 	};
 
 	ws.onerror = e => {
 		canRunCommand = false;
 		addContent('Connection to MoonHack errored: ' + e);
-		if (!isReconnecting) {
-			isReconnecting = true;
-			setTimeout(connectWs, 2000);
-		}
+		setTimeout(() => connectWs(_ws), 2000);
 	};
 }
 
@@ -133,7 +128,6 @@ onmessage = msg => {
 	switch (msg[0]) {
 		case 'init':
 			host = msg[1];
-			isReconnecting = true;
 			connectWs();
 			break;
 		case 'user':
