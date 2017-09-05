@@ -41,6 +41,30 @@ const notificationExchange = connection.declareExchange(
 	}
 );
 
+function signReqJwt(req: any, res: any): Promise<void> {
+	return User.find({
+		owner: req.user.id,
+		retiredAt: { $exists: false },
+	})
+	.then(users => {
+		return (users as UserModel[]).map(user => {
+			return user.name;
+		});
+	})
+	.then(userIds => {
+		res.cookie('jwt', signJwt({
+			id: req.user.id,
+			users: userIds,
+		}, config.sessionSecret, {
+			expiresIn: '1 hour',
+		}), {
+			maxAge: 1 * 60 * 60 * 1000,
+			signed: false,
+			httpOnly: true,
+		});
+	});
+}
+
 passport.use(new SteamStrategy({
 		returnURL: `${config.publicUrl}api/v1/auth/steam/return`,
 		realm: config.publicUrl,
@@ -64,7 +88,9 @@ passport.use(new SteamStrategy({
 			return account.save();
 		})
 		.then(account => {
-			return done(null, account._id);
+			return done(null, {
+				id: account._id
+			});
 		})
 		.catch(done);
 	})
@@ -78,8 +104,8 @@ passport.use(new JWTStrategy({
 		}
 		return null;
 	},
-}, (id, done) => {
-	done(null, id.id);
+}, (data, done) => {
+	done(null, data);
 }));
 
 app.use(cookieParser());
@@ -90,14 +116,7 @@ function canAccountUseUser(req: Express.Request, username: string): Promise<bool
 	if (!req || !req.isAuthenticated() || !username) {
 		return Promise.resolve(false);
 	}
-	return User.findOne({
-		owner: req.user,
-		name: username,
-		retiredAt: { $exists: false },
-	})
-	.then(user => {
-		return !!user;
-	});
+	return Promise.resolve(req.user.users.includes(username));
 }
 
 app.get('/',
@@ -138,7 +157,7 @@ app.get('/api/v1/users',
 	passport.authenticate('jwt'),
 	(req, res) => {
 		User.find({
-			owner: req.user,
+			owner: req.user.id,
 		})
 		.then(users => {
 			return (users as UserModel[]).map(user => {
@@ -159,13 +178,14 @@ app.post('/api/v1/users',
 	passport.authenticate('jwt'),
 	(req, res) => {
 		const user = new User({
-			owner: req.user,
+			owner: req.user.id,
 			name: req.body.username,
 		});
 		user.save()
 		.then(() => {
 			res.sendStatus(200);
-			res.end();
+			signReqJwt(req, res)
+			.then(() => res.end());
 		})
 		.catch(() => {
 			res.sendStatus(400);
@@ -177,7 +197,7 @@ app.delete('/api/v1/users',
 	passport.authenticate('jwt'),
 	(req, res) => {
 		User.findOneAndUpdate({
-			owner: req.user,
+			owner: req.user.id,
 			name: req.body.username,
 			retiredAt: { $exists: false },
 		}, {
@@ -188,7 +208,8 @@ app.delete('/api/v1/users',
 		.then(user => {
 			if (user) {
 				res.sendStatus(200);
-				res.end();
+				signReqJwt(req, res)
+				.then(() => res.end());
 			} else {
 				res.sendStatus(404);
 				res.end();
@@ -278,23 +299,11 @@ app.ws('/api/v1/notifications',
 		})(req as any, null as any, null as any);
 	});
 
-function signReqJwt(req: any, res: any) {
-	res.cookie('jwt', signJwt({
-		id: req.user,
-	}, config.sessionSecret, {
-		expiresIn: '1 hour',
-	}), {
-		maxAge: 1 * 60 * 60 * 1000,
-		signed: false,
-		httpOnly: true,
-	});
-}
-
 app.post('/api/v1/auth/refresh',
 	passport.authenticate('jwt'),
 	(req, res) => {
-		signReqJwt(req, res);
-		res.end();
+		signReqJwt(req, res)
+		.then(() => res.end());
 	});
 
 app.get('/api/v1/auth/steam',
@@ -306,8 +315,8 @@ app.get('/api/v1/auth/steam',
 app.get('/api/v1/auth/steam/return',
 	passport.authenticate('steam', { failureRedirect: '/' }),
 	(req, res) => {
-		signReqJwt(req, res);
-		res.redirect('/');
+		signReqJwt(req, res)
+		.then(() => res.redirect('/'));
 	});
 
 app.use('/static', express.static('static'));
