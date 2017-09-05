@@ -53,10 +53,10 @@ function signReqJwt(req: any, res: any): Promise<boolean> {
 	return Account.findOne({
 		_id: req.user.id,
 	}, {
-		securityId: 1,
+		miniat: 1,
 	})
 	.then(account => {
-		if ((account as AccountModel).securityId !== req.user.securityId) {
+		if ((account as AccountModel).miniat > req.user.iat) {
 			res.cookie('jwt', '', {
 				maxAge: 0,
 				signed: false,
@@ -73,7 +73,6 @@ function signReqJwt(req: any, res: any): Promise<boolean> {
 		.then(userNames => {
 			res.cookie('jwt', signJwt({
 				id: req.user.id,
-				securityId: req.user.securityId,
 				users: userNames.map(u => (u as UserModel).name),
 			}, config.sessionSecret, {
 				expiresIn: '1 hour',
@@ -98,7 +97,6 @@ passport.use(new SteamStrategy({
 			'login.provider': 'steam',
 		}, {
 			_id: 1,
-			securityId: 1,
 		})
 		.then(account => {
 			if (account) {
@@ -109,14 +107,13 @@ passport.use(new SteamStrategy({
 					id,
 					provider: 'steam',
 				},
-				securityId: uuidv4(),
+				miniat: 0,
 			});
 			return account.save();
 		})
 		.then(account => {
 			return done(null, {
 				id: account._id,
-				securityId: (account as AccountModel).securityId,
 			});
 		})
 		.catch(done);
@@ -349,6 +346,19 @@ app.get('/api/v1/auth/steam/return',
 	(req, res) => {
 		signReqJwt(req, res)
 		.then(() => res.redirect('/'));
+	});
+
+app.post('/api/v1/auth/kill',
+	passport.authenticate('jwt'),
+	(req, res) => {
+		Account.findOneAndUpdate({
+			_id: req.user.id,
+		}, {
+			$set: {
+				miniat: Math.ceil(Date.now() / 1000) + 1,
+			},
+		});
+		res.end();
 	});
 
 app.use('/static', express.static('static'));
