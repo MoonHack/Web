@@ -58,7 +58,7 @@ function sendCommand(cmd, args) {
 }
 
 function connectWs(_ws) {
-	if (_ws && _ws !== ws) {
+	if (_ws !== ws) {
 		return;
 	}
 	_ws = new WebSocket('ws://' + host + '/api/v1/notifications');
