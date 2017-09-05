@@ -146,6 +146,8 @@ onmessage = msg => {
 				} else {
 					addContent("could not create user");
 				}
+				ws.close();
+				connectWs(ws);
 				canRunCommand = true;
 			});
 			break;
@@ -159,6 +161,8 @@ onmessage = msg => {
 				} else {
 					addContent("could not retired user");
 				}
+				ws.close();
+				connectWs(ws);
 				canRunCommand = true;
 			});
 			break;
