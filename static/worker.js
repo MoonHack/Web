@@ -1,7 +1,12 @@
 'use strict';
 
 let ws, host, user, canRunCommand;
-canRunCommand = false;
+setCanRunCommand(false);
+
+function setCanRunCommand(can) {
+	canRunCommand = can;
+	updateStatus();
+}
 
 function sendRequest(method, url, data, cb) {
 	const xhr = new XMLHttpRequest();
@@ -29,13 +34,13 @@ function refreshToken(cb) {
 setInterval(refreshToken, 30 * 60 * 1000);
 
 function sendCommand(cmd, args) {
-	canRunCommand = false;
+	setCanRunCommand(false);
 	const xhr = sendRequest('post', '/api/v1/run', {
 		username: user,
 		script: cmd,
 		args: args,
 	}, () => {
-		canRunCommand = true;
+		setCanRunCommand(true);
 	});
 	let lastProgress = 0;
 	let buffer = '';
@@ -79,7 +84,7 @@ function connectWs(_ws) {
 							addContent('Switched user to ' + msg.user);
 							user = msg.user;
 						}
-						canRunCommand = true;
+						setCanRunCommand(true);
 						break;
 					case 'connect':
 						if (!msg.ok) {
@@ -103,13 +108,13 @@ function connectWs(_ws) {
 	};
 
 	ws.onclose = e => {
-		canRunCommand = false;
+		setCanRunCommand(false);
 		addContent('Connection to MoonHack closed: ' + e.code);
 		setTimeout(() => connectWs(_ws), 2000);
 	};
 
 	ws.onerror = e => {
-		canRunCommand = false;
+		setCanRunCommand(false);
 		addContent('Connection to MoonHack errored: ' + e);
 		setTimeout(() => connectWs(_ws), 2000);
 	};
@@ -118,7 +123,7 @@ function connectWs(_ws) {
 function listUsers() {
 	sendRequest('get', '/api/v1/users', null, xhr => {
 		addContent(xhr.responseText);
-		canRunCommand = true;
+		setCanRunCommand(true);
 	});
 }
 
@@ -130,14 +135,14 @@ onmessage = msg => {
 			refreshToken(() => connectWs());
 			break;
 		case 'user':
-			canRunCommand = false;
+			setCanRunCommand(false);
 			ws.send(msg[1]);
 			break;
 		case 'lsuser':
 			listUsers();
 			break;
 		case 'mkuser':
-			canRunCommand = false;
+			setCanRunCommand(false);
 			sendRequest('post', '/api/v1/users', {
 				username: msg[1]
 			}, xhr => {
@@ -148,11 +153,11 @@ onmessage = msg => {
 				}
 				ws.close();
 				connectWs(ws);
-				canRunCommand = true;
+				setCanRunCommand(true);
 			});
 			break;
 		case 'rmuser':
-			canRunCommand = false;
+			setCanRunCommand(false);
 			sendRequest('delete', '/api/v1/users', {
 				username: msg[1]
 			}, xhr => {
@@ -163,7 +168,7 @@ onmessage = msg => {
 				}
 				ws.close();
 				connectWs(ws);
-				canRunCommand = true;
+				setCanRunCommand(true);
 			});
 			break;
 		case 'command':
@@ -171,13 +176,13 @@ onmessage = msg => {
 				addContent("please select a user first");
 				return;
 			}
-			canRunCommand = false;
+			setCanRunCommand(false);
 			sendCommand(msg[1], msg[2]);
 			break;
 	}
 }
 
-let hardlineTimeEnd = 0, userName = 'N/A', gameState = 'N/A', canInput = false, pingTime = 0, pingLatency = 0, pingInProgress = false;
+let pingTime = 0, pingLatency = 0, pingInProgress = false;
 
 function padStatusText(str, len, padStr = '&nbsp;') {
 	str = str.toString();
@@ -200,15 +205,11 @@ function updateStatus() {
 		return;
 	}
 
-	const hardlineLeft = (hardlineTimeEnd - Date.now()) / 1000;
 	postMessage(['status',`
-		Account: ${padStatusText(user, 16)} |
-		User: ${padStatusText(userName, 32)} |
-		Hardline: <span style="color: #${(hardlineLeft > 0) ? ('ff0000;">' + padStatusNumber(hardlineLeft.toFixed(1), 5)) : '00ff00;">&nbsp;Off&nbsp;'}</span> |
-		Input: <span style="color: #${canInput ? '00ff00;">yes' : 'ff0000;">no&nbsp;'}</span> |
-		Game state: ${padStatusText(gameState, 16)} |
+		User: ${padStatusText(user, 32)} |
+		Input: <span style="color: #${canRunCommand ? '00ff00;">yes' : 'ff0000;">no&nbsp;'}</span> |
 		Ping: <span style="${pingInProgress ? 'color: #ffff00;' : ''}">${padStatusText(pingLatency, 4)}ms</span>
-	`,`${(hardlineLeft > 0) ? ('HL ' + Math.floor(hardlineLeft)) : 'CL'} ${canInput ? 'IDL' : 'BSY'} ${userName}@${user} ${gameState} - HMWeb`]);
+	`,`${canRunCommand ? 'IDL' : 'BSY'} ${user} - MHWeb`]);
 }
 
 updateStatus();
@@ -229,15 +230,5 @@ function addContent(content) {
 	}
 	shellDebounceTimer = setTimeout(postShell, 10);
 }
-
-let buffer = '';
-
-function conditionalStatusUpdate() {
-	if (hardlineTimeEnd - Date.now() > -1000) {
-		updateStatus();
-	}
-}
-
-setInterval(conditionalStatusUpdate, 100);
 
 postMessage(['init' ]);
