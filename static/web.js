@@ -50,21 +50,23 @@ function initialize() {
 				args = '';
 			}
 			addContent(`> ${t}`);
-			if (cmd === 'user') {
-				if (args !== '') {
-					worker.postMessage(['user',args]);
-					return;
-				}
-				worker.postMessage(['lsuser']);
-				return;
-			} else if (cmd === 'create_user') {
-				worker.postMessage(['mkuser', args]);
-				return;
-			} else if (cmd === 'retire_user') {
-				worker.postMessage(['rmuser', args]);
-				return;
+			switch (cmd) {
+				case 'user':
+					if (args !== '') {
+						worker.postMessage(['user',args]);
+						break;
+					}
+					break;
+				case 'create_user':
+					worker.postMessage(['mkuser', args]);
+					break;
+				case 'retire_user':
+					worker.postMessage(['rmuser', args]);
+					break;
+				default:
+					worker.postMessage(['command',cmd,args]);
+					break;
 			}
-			worker.postMessage(['command',cmd,args]);
 		}
 	});
 }
