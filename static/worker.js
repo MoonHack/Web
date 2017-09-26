@@ -255,7 +255,6 @@ function listUsers() {
 		}
 		return response.json()
 		.then((data) => {
-			const data = JSON.parse(xhr.responseText);
 			const users = [];
 			const rUsers = [];
 			data.forEach(u => {
