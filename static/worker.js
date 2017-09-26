@@ -2,6 +2,7 @@
 
 let ws, host, protocol, user, canRunCommand, wsErrored;
 wsErrored = true;
+console.log('Worker initialized');
 setCanRunCommand(false);
 
 function setCanRunCommand(can) {
@@ -13,6 +14,23 @@ function reconnectWS() {
 	ws.close();
 	connectWs(ws);
 }
+
+function sendObject(obj) {
+	if (ws) {
+		ws.send(JSON.stringify(obj));
+	}
+}
+setInterval(() => {
+	if (pingInProgress) {
+		return;
+	}
+	pingTime = Date.now();
+	pingInProgress = true;
+	updateStatus();
+	sendObject({
+		command: 'ping',
+	});
+}, 5 * 1000);
 
 function sendRequest(method, url, data, cb) {
 	const xhr = new XMLHttpRequest();
@@ -116,15 +134,30 @@ function connectWs(_ws) {
 								addContent('Connected to MoonHack');
 							}
 							if (user) {
-								ws.send(JSON.stringify({
+								sendObject({
 									command: 'userswitch',
 									user: user,
-								}));
+								});
 							} else if(wsErrored) {
 								listUsers();
 							}
 							wsErrored = false;
+							pingInProgress = false;
 						}
+						break;
+					case 'ping':
+						pingInProgress = false;
+						pingLatency = Date.now() - pingTime;
+						updateStatus();
+						break;
+				}
+				break;
+			case 'command':
+				switch (msg.command) {
+					case 'ping':
+						sendObject({
+							command: 'pong',
+						});
 						break;
 				}
 				break;
@@ -177,10 +210,10 @@ onmessage = msg => {
 			break;
 		case 'user':
 			setCanRunCommand(false);
-			ws.send(JSON.stringify({
+			sendObject({
 				command: 'userswitch',
 				user: msg[1],
-			}));
+			});
 			break;
 		case 'lsuser':
 			listUsers();

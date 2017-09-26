@@ -295,6 +295,16 @@ app.ws('/api/v1/notifications',
 				// TODO: Deal with JWT expiry
 				const data = JSON.parse(dataStr.toString());
 				switch (data.command) {
+					case 'ping':
+						sendObject({
+							type: 'result',
+							command: 'ping',
+							ok: true,
+						});
+						break;
+					case 'pong':
+						// Ignore
+						break;
 					case 'userswitch':
 						const username = data.user;
 						close();
