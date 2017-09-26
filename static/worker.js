@@ -63,9 +63,12 @@ function sendCommand(cmd, args) {
 	setCanRunCommand(false);
 
 	let buffer = '';
+	const decoder = new TextDecoder('utf-8');
 	function handleProgress(value) {
-		console.log(value);
-		buffer += value.toString();
+		if (!value) {
+			return;
+		}
+		buffer += decoder.decode(value);
 		let i;
 		while ((i = buffer.indexOf('\n')) >= 0) {
 			if (buffer.charCodeAt(0) !== 1) {
