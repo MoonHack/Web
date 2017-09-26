@@ -144,11 +144,12 @@ function sendCommand(cmd, args) {
 		}
 	}
 
-	sendRequest('post', '/api/v1/run', {
+	return sendRequest('post', '/api/v1/run', {
 		username: user,
 		script: cmd,
 		args: args,
-	}, (response) => {
+	})
+	.then((response) => {
 		if (!response.ok) {
 			return response.body()
 			.then(body => addContentParsed([false, body]));
