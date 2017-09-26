@@ -43,7 +43,7 @@ function sendRequest(method, url, data, cb, progressCb) {
 			cb(xhr);
 		};
 	}
-	if (progress) {
+	if (progressCb) {
 		xhr.onloadstart = progressCb;
 		xhr.onload = progressCb;
 		xhr.onprogress = progressCb;
