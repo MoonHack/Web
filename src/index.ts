@@ -207,7 +207,6 @@ app.post('/api/v1/users',
 		});
 		user.save()
 		.then(() => {
-			res.sendStatus(200);
 			signReqJwt(req, res)
 			.then(() => res.end());
 		})
@@ -231,7 +230,6 @@ app.delete('/api/v1/users',
 		})
 		.then(user => {
 			if (user) {
-				res.sendStatus(200);
 				signReqJwt(req, res)
 				.then(() => res.end());
 			} else {
