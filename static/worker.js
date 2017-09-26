@@ -145,7 +145,10 @@ onmessage = msg => {
 			break;
 		case 'user':
 			setCanRunCommand(false);
-			ws.send(msg[1]);
+			ws.send({
+				command: 'userswitch',
+				user: msg[1]
+			});
 			break;
 		case 'lsuser':
 			listUsers();

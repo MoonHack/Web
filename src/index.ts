@@ -271,49 +271,54 @@ app.ws('/api/v1/notifications',
 					queue = undefined;
 				}
 			}
-			ws.on('message', (data) => {
+			ws.on('message', (dataStr) => {
 				// TODO: Deal with JWT expiry
-				const username = data.toString();
-				close();
-				
-				canAccountUseUser(req,  username)
-				.then(allowed => {
-					if (!allowed) {
-						sendObject({
-							type: 'result',
-							command: 'userswitch',
-							ok: false,
-							user: username,
-							error: 'Forbidden',
-						});
-						return;
-					}
+				const data = JSON.parse(dataStr.toString());
+				switch (data.command) {
+					case 'userswitch':
+						const username = data.user;
+						close();
+						
+						canAccountUseUser(req,  username)
+						.then(allowed => {
+							if (!allowed) {
+								sendObject({
+									type: 'result',
+									command: 'userswitch',
+									ok: false,
+									user: username,
+									error: 'Forbidden',
+								});
+								return;
+							}
 
-					sendObject({
-						type: 'result',
-						command: 'userswitch',
-						ok: true,
-						user: username,
-					});
-					const q = connection.declareQueue(
-						`moonhack_notification_listener_${uuidv4()}`,
-						{
-							exclusive: true,
-						}
-					);
-					queue = q;
-					connection.completeConfiguration()
-					.then(() => q.bind(notificationExchange, username))
-					.then(() => q.activateConsumer((message) => {
-						sendObject({
-							type: 'notification',
-							user: username,
-							data: message.content.toString('utf8')
+							sendObject({
+								type: 'result',
+								command: 'userswitch',
+								ok: true,
+								user: username,
+							});
+							const q = connection.declareQueue(
+								`moonhack_notification_listener_${uuidv4()}`,
+								{
+									exclusive: true,
+								}
+							);
+							queue = q;
+							connection.completeConfiguration()
+							.then(() => q.bind(notificationExchange, username))
+							.then(() => q.activateConsumer((message) => {
+								sendObject({
+									type: 'notification',
+									user: username,
+									data: message.content.toString('utf8')
+								});
+							}, {
+								noAck: true,
+							}));
 						});
-					}, {
-						noAck: true,
-					}));
-				});
+						break;
+				}
 			});
 
 			ws.on('close', close);
