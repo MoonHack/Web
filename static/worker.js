@@ -74,7 +74,13 @@ function sendCommand(cmd, args) {
 	let lastProgress = 0;
 	let buffer = '';
 	function handleProgress(pe) {
-		console.log(pe);
+		if (!xhr) {
+			xhr = pe.target;
+			if (!xhr) {
+				return;
+			}
+		}
+		console.log(xhr.responseText.length);
 		const added = xhr.responseText.substr(lastProgress);
 		if (added.length < 1) {
 			return;
@@ -83,7 +89,7 @@ function sendCommand(cmd, args) {
 		let i;
 		while ((i = buffer.indexOf('\n')) >= 0) {
 			if (buffer.charCodeAt(0) !== 1) {
-				const data = JSON.parse(buffer.substr(0, i));
+				const data = JSON.parse(buffer.substr(0, i).trim());
 				switch (data.type) {
 					case 'return':
 						addContentParsed(data.data);
@@ -98,7 +104,7 @@ function sendCommand(cmd, args) {
 						break;
 				}
 			} else {
-				const status = buffer.substr(1, i);
+				const status = buffer.substr(1, i - 1).trim();
 				switch (status) {
 					case 'OK':
 						// Do nothing, script has return
