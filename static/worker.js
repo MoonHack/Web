@@ -64,6 +64,7 @@ function sendCommand(cmd, args) {
 
 	let buffer = '';
 	function handleProgress(value) {
+		console.log(value);
 		buffer += value;
 		let i;
 		while ((i = buffer.indexOf('\n')) >= 0) {
