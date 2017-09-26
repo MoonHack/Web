@@ -147,6 +147,8 @@ function canAccountUseUser(req: Express.Request, username: string): Promise<bool
 
 app.get('/',
 	(req, res, next) => {
+		delete req.headers['if-modified-since'];
+		delete req.headers['if-none-match'];
 		res.header('Cache-Control', 'private');
 		passport.authenticate('jwt', (err: any,  user: any) => {
 			if (err || !user) {
