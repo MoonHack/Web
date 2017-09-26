@@ -122,8 +122,11 @@ function sendCommand(cmd, args) {
 	})
 	.then((response) => {
 		if (!response.ok) {
-			return response.body()
-			.then(body => addContentParsed([false, body]));
+			return response.text()
+			.then(body => {
+				addContentParsed([false, body]);
+				setCanRunCommand(true);
+			});
 		}
 		const reader = response.body.getReader();
 		function next() {
