@@ -32,7 +32,7 @@ setInterval(() => {
 	});
 }, 5 * 1000);
 
-function sendRequest(method, url, data, cb) {
+function sendRequest(method, url, data, cb, progressCb) {
 	const xhr = new XMLHttpRequest();
 	xhr.open(method, url);
 	if (cb) {
@@ -42,6 +42,12 @@ function sendRequest(method, url, data, cb) {
 			}
 			cb(xhr);
 		};
+	}
+	if (progress) {
+		xhr.onloadstart = progressCb;
+		xhr.onload = progressCb;
+		xhr.onprogress = progressCb;
+		xhr.onloadend = progressCb;
 	}
 	if (data) {
 		xhr.setRequestHeader('Content-Type', 'application/json');
@@ -62,21 +68,15 @@ setInterval(refreshToken, 30 * 60 * 1000);
 
 function sendCommand(cmd, args) {
 	setCanRunCommand(false);
-	const xhr = sendRequest('post', '/api/v1/run', {
-		username: user,
-		script: cmd,
-		args: args,
-	}, (xhr) => {
-		if (xhr.status !== 200) {
-			addContentParsed([false, xhr.responseText]);
-		}
-		setCanRunCommand(true);
-	});
+
 	let lastProgress = 0;
 	let buffer = '';
 	function handleProgress(pe) {
 		console.log(pe);
 		const added = xhr.responseText.substr(lastProgress);
+		if (added.length < 1) {
+			return;
+		}
 		buffer += added;
 		let i;
 		while ((i = buffer.indexOf('\n')) >= 0) {
@@ -124,8 +124,17 @@ function sendCommand(cmd, args) {
 		}
 		lastProgress = pe.loaded;
 	}
-	xhr.onprogress = handleProgress;
-	xhr.onloadend = handleProgress;
+
+	sendRequest('post', '/api/v1/run', {
+		username: user,
+		script: cmd,
+		args: args,
+	}, (xhr) => {
+		if (xhr.status !== 200) {
+			addContentParsed([false, xhr.responseText]);
+		}
+		setCanRunCommand(true);
+	}, handleProgress);
 }
 
 function connectWs(_ws) {
