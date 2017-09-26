@@ -75,6 +75,7 @@ function sendCommand(cmd, args) {
 	let lastProgress = 0;
 	let buffer = '';
 	function handleProgress(pe) {
+		console.log(pe);
 		const added = xhr.responseText.substr(lastProgress);
 		buffer += added;
 		let i;
@@ -92,6 +93,26 @@ function sendCommand(cmd, args) {
 						break;
 					case 'error':
 						addContentParsed([false, data.data]);
+						break;
+				}
+			} else {
+				const status = buffer.substr(1, i);
+				switch (status) {
+					case 'OK':
+						// Do nothing, script has return
+						break;
+					case 'INTERNAL':
+						addContentParsed([false, 'Internal error in scripting engine']);
+						break;
+					case 'MEMORY_LIMIT':
+						addContentParsed([false, 'Script hit memory limit and was terminated']);
+						break;
+					case 'SOFT_TIMEOUT':
+					case 'HARD_TIMEOUT':
+						addContentParsed([false, 'Script hit 5 second timeout and was terminated']);
+						break;
+					default:
+						addContentParsed([false, 'Unknown result code: ' + status]);
 						break;
 				}
 			}
