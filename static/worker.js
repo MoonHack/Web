@@ -68,6 +68,7 @@ function sendCommand(cmd, args) {
 	setCanRunCommand(false);
 
 	let xhr;
+	let intvl = setInterval(() => console.log(xhr.responseText.length), 100);
 
 	let lastProgress = 0;
 	let buffer = '';
@@ -139,6 +140,7 @@ function sendCommand(cmd, args) {
 		if (xhr.status !== 200) {
 			addContentParsed([false, xhr.responseText]);
 		}
+		clearInterval(intvl);
 		setCanRunCommand(true);
 	}, handleProgress);
 }
