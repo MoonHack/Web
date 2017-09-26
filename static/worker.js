@@ -69,6 +69,8 @@ setInterval(refreshToken, 30 * 60 * 1000);
 function sendCommand(cmd, args) {
 	setCanRunCommand(false);
 
+	let xhr;
+
 	let lastProgress = 0;
 	let buffer = '';
 	function handleProgress(pe) {
@@ -125,7 +127,7 @@ function sendCommand(cmd, args) {
 		lastProgress = pe.loaded;
 	}
 
-	sendRequest('post', '/api/v1/run', {
+	xhr = sendRequest('post', '/api/v1/run', {
 		username: user,
 		script: cmd,
 		args: args,
