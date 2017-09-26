@@ -175,9 +175,7 @@ app.post('/api/v1/run',
 			try {
 				const argsObj = JSON5.parse(args);
 				if (typeof argsObj !== 'object' || argsObj instanceof Array) {
-					res.sendStatus(400);
-					res.end();
-					return;
+					throw new Error('JSON args payload must be an object');
 				}
 				argsStr = JSON.stringify(argsObj);
 			} catch(e) {
