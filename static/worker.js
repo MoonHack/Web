@@ -44,10 +44,8 @@ function sendRequest(method, url, data, cb, progressCb) {
 		};
 	}
 	if (progressCb) {
-		xhr.onloadstart = progressCb;
-		xhr.onload = progressCb;
-		xhr.onprogress = progressCb;
-		xhr.onloadend = progressCb;
+		xhr.addEventListener('progress', progressCb, false);
+		xhr.addEventListener('loadend', progressCb, false);
 	}
 	if (data) {
 		xhr.setRequestHeader('Content-Type', 'application/json');
