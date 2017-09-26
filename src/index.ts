@@ -180,7 +180,7 @@ app.post('/api/v1/run',
 				argsStr = JSON.stringify(argsObj);
 			} catch(e) {
 				res.status(400);
-				res.write(e.message);
+				res.send(e.message);
 				res.end();
 				return;				
 			}
@@ -213,7 +213,7 @@ app.get('/api/v1/users',
 			});
 		})
 		.then(users => {
-			res.write(JSON.stringify(users));
+			res.send(JSON.stringify(users));
 			res.end();
 		});
 	});
