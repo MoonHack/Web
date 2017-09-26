@@ -135,6 +135,7 @@ passport.use(new JWTStrategy({
 app.use(cookieParser());
 app.use(jsonBodyParser());
 app.use(passport.initialize());
+app.set('etag', false);
 
 function canAccountUseUser(req: Express.Request, username: string): Promise<boolean> {
 	if (!req || !req.isAuthenticated() || !username) {
