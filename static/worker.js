@@ -96,7 +96,7 @@ function connectWs(_ws) {
 							if (user === msg.user) {
 								user = null;
 							}
-						} else {
+						} else if (user !== msg.user) {
 							addContent('Switched user to ' + msg.user);
 							user = msg.user;
 						}
