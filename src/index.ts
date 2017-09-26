@@ -162,6 +162,8 @@ app.get('/',
 app.post('/api/v1/run',
 	passport.authenticate('jwt'),
 	(req, res) => {
+		res.header('Cache-Control', 'private');
+
 		const username = req.body.username;
 		const script = req.body.script;
 		
@@ -203,6 +205,8 @@ app.post('/api/v1/run',
 app.get('/api/v1/users',
 	passport.authenticate('jwt'),
 	(req, res) => {
+		res.header('Cache-Control', 'private');
+
 		User.find({
 			owner: req.user.id,
 		})
@@ -224,6 +228,8 @@ app.get('/api/v1/users',
 app.post('/api/v1/users',
 	passport.authenticate('jwt'),
 	(req, res) => {
+		res.header('Cache-Control', 'private');
+
 		const user = new User({
 			owner: req.user.id,
 			name: req.body.username,
@@ -242,6 +248,8 @@ app.post('/api/v1/users',
 app.delete('/api/v1/users',
 	passport.authenticate('jwt'),
 	(req, res) => {
+		res.header('Cache-Control', 'private');
+
 		User.findOneAndUpdate({
 			owner: req.user.id,
 			name: req.body.username,
@@ -363,6 +371,8 @@ app.ws('/api/v1/notifications',
 app.post('/api/v1/auth/refresh',
 	passport.authenticate('jwt'),
 	(req, res) => {
+		res.header('Cache-Control', 'private');
+
 		signReqJwt(req, res)
 		.then(ok => {
 			if (!ok) {
@@ -375,12 +385,16 @@ app.post('/api/v1/auth/refresh',
 app.get('/api/v1/auth/steam',
 	passport.authenticate('steam', { failureRedirect: '/' }),
 	(_req, res) => {
+		res.header('Cache-Control', 'private');
+
 		res.redirect('/');
 	});
 
 app.get('/api/v1/auth/steam/return',
 	passport.authenticate('steam', { failureRedirect: '/' }),
 	(req, res) => {
+		res.header('Cache-Control', 'private');
+
 		signReqJwt(req, res)
 		.then(() => res.redirect('/'));
 	});
@@ -388,6 +402,8 @@ app.get('/api/v1/auth/steam/return',
 app.post('/api/v1/auth/kill',
 	passport.authenticate('jwt'),
 	(req, res) => {
+		res.header('Cache-Control', 'private');
+
 		Account.findOneAndUpdate({
 			_id: req.user.id,
 		}, {
