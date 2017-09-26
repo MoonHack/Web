@@ -35,39 +35,6 @@ setInterval(() => {
 	});
 }, 5 * 1000);
 
-/*
-function consume(reader) {
-  var total = 0
-  return new Promise((resolve, reject) => {
-    function pump() {
-      reader.read().then(({done, value}) => {
-        if (done) {
-          resolve()
-          return
-        }
-        total += value.byteLength
-        console.log(`received ${value.byteLength} bytes (${total} bytes in total)`)
-        pump()
-      }).catch(reject)
-    }
-    pump()
-  })
-}
-
-fetch("/api/v1/run",
-{
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    credentials: "same-origin",
-    method: "POST",
-    body: '{"username":"dori","script":"dori.test","args":""}'
-})
-  .then(res => consume(res.body.getReader()))
-  .then(() => console.log("consumed the entire body without keeping the whole thing in memory!"))
-  .catch(e => console.log("something went wrong: " + e))
-*/
-
 function sendRequest(method, url, data) {
 	const headers = {};
 	let body;
@@ -154,7 +121,7 @@ function sendCommand(cmd, args) {
 			return response.body()
 			.then(body => addContentParsed([false, body]));
 		}
-		const reader = response.getReader();
+		const reader = response.body.getReader();
 		function next() {
 			reader.read()
 			.then(({ value, done }) => {
