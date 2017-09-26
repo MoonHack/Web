@@ -48,7 +48,10 @@ function sendCommand(cmd, args) {
 		username: user,
 		script: cmd,
 		args: args,
-	}, () => {
+	}, (xhr) => {
+		if (xhr.status !== 200) {
+			addContentParsed([false, xhr.responseText]);
+		}
 		setCanRunCommand(true);
 	});
 	let lastProgress = 0;
