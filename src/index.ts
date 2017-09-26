@@ -16,6 +16,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { run } from './runner';
 import * as path from 'path';
 import { sign as signJwt } from 'jsonwebtoken';
+import * as JSON5 from 'json5';
 
 mongoose.connect(config.mongoUrl, {
 	useMongoClient: true,
@@ -160,11 +161,30 @@ app.post('/api/v1/run',
 	(req, res) => {
 		const username = req.body.username;
 		const script = req.body.script;
-		const args = req.body.args || '';
-		if (!username || !script || (args.length > 0 && args[0] !== '{')) {
+		
+		if (!username || !script) {
 			res.sendStatus(400);
 			res.end();
 			return;
+		}
+
+		const args = req.body.args;
+		
+		let argsStr = '';
+		if (args) {
+			try {
+				const argsObj = JSON5.parse(args);
+				if (typeof argsObj !== 'object' || argsObj instanceof Array) {
+					res.sendStatus(400);
+					res.end();
+					return;
+				}
+				argsStr = JSON.stringify(argsObj);
+			} catch(e) {
+				res.sendStatus(400);
+				res.end();
+				return;				
+			}
 		}
 
 		canAccountUseUser(req, username)
@@ -174,7 +194,7 @@ app.post('/api/v1/run',
 				res.end();
 				return;
 			}
-			return run(username, script, args, res);
+			return run(username, script, argsStr, res);
 		})
 	});
 
