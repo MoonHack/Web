@@ -101,16 +101,16 @@ function connectWs(_ws) {
 						} else {
 							if (wsErrored) {
 								addContent('Connected to MoonHack');
-								wsErrored = false;
 							}
 							if (user) {
 								ws.send(JSON.stringify({
 									command: 'userswitch',
 									user: user,
 								}));
-							} else {
+							} else if(wsErrored) {
 								listUsers();
 							}
+							wsErrored = false;
 						}
 						break;
 				}
@@ -138,8 +138,24 @@ function connectWs(_ws) {
 
 function listUsers() {
 	sendRequest('get', '/api/v1/users', null, xhr => {
-		addContent(xhr.responseText);
 		setCanRunCommand(true);
+		if (xhr.status !== 200) {
+			addContent('Error getting user list');
+			return;
+		}
+		const data = JSON.parse(xhr.responseText);
+		const users = [];
+		const rUsers = [];
+		data.forEach(u => {
+			const un = u.name;
+			if (u.retiredAt) {
+				rUsers.push(un);
+			} else {
+				users.push(un);
+			}
+		});
+		addContent('Users: ' + users.join(', '));
+		addContent('Retired users: ' + rUsers.join(', '));
 	});
 }
 
