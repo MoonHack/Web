@@ -272,6 +272,7 @@ app.ws('/api/v1/notifications',
 				}
 			}
 			ws.on('message', (data) => {
+				// TODO: Deal with JWT expiry
 				const username = data.toString();
 				close();
 				

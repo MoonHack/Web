@@ -8,6 +8,11 @@ function setCanRunCommand(can) {
 	updateStatus();
 }
 
+function reconnectWS() {
+	ws.close();
+	connectWs(ws);
+}
+
 function sendRequest(method, url, data, cb) {
 	const xhr = new XMLHttpRequest();
 	xhr.open(method, url);
@@ -29,6 +34,9 @@ function sendRequest(method, url, data, cb) {
 }
 
 function refreshToken(cb) {
+	if (!cb) {
+		cb = reconnectWS;
+	}
 	sendRequest('post', '/api/v1/auth/refresh', null, cb);
 }
 setInterval(refreshToken, 30 * 60 * 1000);
@@ -152,8 +160,7 @@ onmessage = msg => {
 				} else {
 					addContent("could not create user");
 				}
-				ws.close();
-				connectWs(ws);
+				reconnectWS();
 				setCanRunCommand(true);
 			});
 			break;
@@ -167,8 +174,7 @@ onmessage = msg => {
 				} else {
 					addContent("could not retired user");
 				}
-				ws.close();
-				connectWs(ws);
+				reconnectWS();
 				setCanRunCommand(true);
 			});
 			break;
