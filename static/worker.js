@@ -11,6 +11,9 @@ function setCanRunCommand(can) {
 }
 
 function reconnectWS() {
+	if (!ws) {
+		return;
+	}
 	ws.close();
 	connectWs(ws);
 }
@@ -32,59 +35,69 @@ setInterval(() => {
 	});
 }, 5 * 1000);
 
-function sendRequest(method, url, data, cb, progressCb) {
-	const xhr = new XMLHttpRequest();
-	xhr.open(method, url);
-	if (cb) {
-		xhr.onreadystatechange = () => {
-			if (xhr.readyState !== 4) {
-				return;
-			}
-			cb(xhr);
-		};
-	}
-	if (progressCb) {
-		xhr.addEventListener('progress', progressCb, false);
-		xhr.addEventListener('loadend', progressCb, false);
-	}
-	if (data) {
-		xhr.setRequestHeader('Content-Type', 'application/json');
-		xhr.send(JSON.stringify(data));	
-	} else {
-		xhr.send();
-	}
-	return xhr;
+/*
+function consume(reader) {
+  var total = 0
+  return new Promise((resolve, reject) => {
+    function pump() {
+      reader.read().then(({done, value}) => {
+        if (done) {
+          resolve()
+          return
+        }
+        total += value.byteLength
+        console.log(`received ${value.byteLength} bytes (${total} bytes in total)`)
+        pump()
+      }).catch(reject)
+    }
+    pump()
+  })
 }
 
-function refreshToken(cb) {
-	if (!cb) {
-		cb = reconnectWS;
+fetch("/api/v1/run",
+{
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    credentials: "same-origin",
+    method: "POST",
+    body: '{"username":"dori","script":"dori.test","args":""}'
+})
+  .then(res => consume(res.body.getReader()))
+  .then(() => console.log("consumed the entire body without keeping the whole thing in memory!"))
+  .catch(e => console.log("something went wrong: " + e))
+*/
+
+function sendRequest(method, url, data) {
+	const headers = {};
+	let body;
+	if (data) {
+		headers['Content-Type'] = 'application/json';
+		body = JSON.stringify(data);
 	}
-	sendRequest('post', '/api/v1/auth/refresh', null, cb);
+	return fetch(url, {
+		headers,
+		method,
+		body,
+		credentials: 'same-origin',
+	});
+}
+
+function refreshToken() {
+	return sendRequest('post', '/api/v1/auth/refresh', null)
+	.then((response) => {
+		reconnectWS();
+		return response;
+	})
 }
 setInterval(refreshToken, 30 * 60 * 1000);
 
 function sendCommand(cmd, args) {
 	setCanRunCommand(false);
 
-	let xhr;
-	let intvl = setInterval(() => console.log(xhr.responseText.length), 100);
-
-	let lastProgress = 0;
 	let buffer = '';
-	function handleProgress(pe) {
-		if (!xhr) {
-			xhr = pe.target;
-			if (!xhr) {
-				return;
-			}
-		}
-		console.log(xhr.responseText.length);
-		const added = xhr.responseText.substr(lastProgress);
-		if (added.length < 1) {
-			return;
-		}
-		buffer += added;
+	function handleProgress(value) {
+		buffer += value;
 		let i;
 		while ((i = buffer.indexOf('\n')) >= 0) {
 			if (buffer.charCodeAt(0) !== 1) {
@@ -129,20 +142,31 @@ function sendCommand(cmd, args) {
 				buffer = buffer.substr(i + 1);
 			}
 		}
-		lastProgress = pe.loaded;
 	}
 
-	xhr = sendRequest('post', '/api/v1/run', {
+	sendRequest('post', '/api/v1/run', {
 		username: user,
 		script: cmd,
 		args: args,
-	}, (xhr) => {
-		if (xhr.status !== 200) {
-			addContentParsed([false, xhr.responseText]);
+	}, (response) => {
+		if (!response.ok) {
+			return response.body()
+			.then(body => addContentParsed([false, body]));
 		}
-		clearInterval(intvl);
-		setCanRunCommand(true);
-	}, handleProgress);
+		const reader = response.getReader();
+		function next() {
+			reader.read()
+			.then(({ value, done }) => {
+				handleProgress(value);
+				if (done) {
+					setCanRunCommand(true);
+					return;
+				}
+				next();
+			});
+		}
+		next();
+	});
 }
 
 function connectWs(_ws) {
@@ -221,25 +245,29 @@ function connectWs(_ws) {
 }
 
 function listUsers() {
-	sendRequest('get', '/api/v1/users', null, xhr => {
+	sendRequest('get', '/api/v1/users', null)
+	.then((response) => {
 		setCanRunCommand(true);
-		if (xhr.status !== 200) {
+		if (!response.ok) {
 			addContent('Error getting user list');
 			return;
 		}
-		const data = JSON.parse(xhr.responseText);
-		const users = [];
-		const rUsers = [];
-		data.forEach(u => {
-			const un = u.name;
-			if (u.retiredAt) {
-				rUsers.push(un);
-			} else {
-				users.push(un);
-			}
+		return response.json()
+		.then((data) => {
+			const data = JSON.parse(xhr.responseText);
+			const users = [];
+			const rUsers = [];
+			data.forEach(u => {
+				const un = u.name;
+				if (u.retiredAt) {
+					rUsers.push(un);
+				} else {
+					users.push(un);
+				}
+			});
+			addContent('Users: ' + users.join(', '));
+			addContent('Retired users: ' + rUsers.join(', '));
 		});
-		addContent('Users: ' + users.join(', '));
-		addContent('Retired users: ' + rUsers.join(', '));
 	});
 }
 
@@ -249,7 +277,7 @@ onmessage = msg => {
 		case 'init':
 			host = msg[1];
 			protocol = msg[2];
-			refreshToken(() => connectWs());
+			refreshToken().then(() => connectWs());
 			break;
 		case 'user':
 			setCanRunCommand(false);
@@ -265,8 +293,9 @@ onmessage = msg => {
 			setCanRunCommand(false);
 			sendRequest('post', '/api/v1/users', {
 				username: msg[1],
-			}, xhr => {
-				if (xhr.status >= 200 && xhr.status <= 299) {
+			})
+			.then(response => {
+				if (response.ok) {
 					addContent('user created');
 				} else {
 					addContent('could not create user');
@@ -279,8 +308,9 @@ onmessage = msg => {
 			setCanRunCommand(false);
 			sendRequest('delete', '/api/v1/users', {
 				username: msg[1],
-			}, xhr => {
-				if (xhr.status >= 200 && xhr.status <= 299) {
+			})
+			.then(response => {
+				if (response.ok) {
 					addContent('user retired');
 				} else {
 					addContent('could not retired user');
