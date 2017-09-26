@@ -64,6 +64,9 @@ function sendCommand(cmd, args) {
 					case 'return':
 						addContentParsed(data.data);
 						break;
+					case 'error':
+						addContentParsed([false, data.data]);
+						break;
 				}
 			}
 			if (i === buffer.length - 1) {
