@@ -1,6 +1,7 @@
 'use strict';
 
-let ws, host, protocol, user, canRunCommand;
+let ws, host, protocol, user, canRunCommand, wsErrored;
+wsErrored = true;
 setCanRunCommand(false);
 
 function setCanRunCommand(can) {
@@ -98,9 +99,15 @@ function connectWs(_ws) {
 						if (!msg.ok) {
 							postMessage(['reload']);
 						} else {
-							addContent('Connected to MoonHack');
+							if (wsErrored) {
+								addContent('Connected to MoonHack');
+								wsErrored = false;
+							}
 							if (user) {
-								ws.send(user);
+								ws.send(JSON.stringify({
+									command: 'userswitch',
+									user: user,
+								}));
 							} else {
 								listUsers();
 							}
@@ -111,19 +118,20 @@ function connectWs(_ws) {
 		}
 	};
 
-	ws.onopen = () => {
-		addContent('Connection to MoonHack initialized');
-	};
+	//ws.onopen = () => {
+	//	addContent('Connection to MoonHack initialized');	
+	//};
 
 	ws.onclose = e => {
 		setCanRunCommand(false);
-		addContent('Connection to MoonHack closed: ' + e.code);
+		//addContent('Connection to MoonHack closed: ' + e.code);
 		setTimeout(() => connectWs(_ws), 2000);
 	};
 
 	ws.onerror = e => {
 		setCanRunCommand(false);
 		addContent('Connection to MoonHack errored: ' + e);
+		wsErrored = true;
 		setTimeout(() => connectWs(_ws), 2000);
 	};
 }
