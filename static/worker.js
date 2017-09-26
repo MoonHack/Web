@@ -85,6 +85,11 @@ function sendCommand(cmd, args) {
 					case 'return':
 						addContentParsed(data.data);
 						break;
+					case 'print':
+						if (data.initial) {
+							addContentParsed(data.data);
+						}
+						break;
 					case 'error':
 						addContentParsed([false, data.data]);
 						break;
