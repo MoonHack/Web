@@ -19,7 +19,7 @@ function initialize() {
 				sContent.scrollTop = sContent.scrollHeight - sContent.clientHeight;
 				break;
 			case 'init':
-				worker.postMessage(['init', document.location.host]);
+				worker.postMessage(['init', document.location.host, document.location.protocol]);
 				break;
 			case 'reload':
 				document.location.reload();

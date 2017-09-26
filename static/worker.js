@@ -1,6 +1,6 @@
 'use strict';
 
-let ws, host, user, canRunCommand;
+let ws, host, protocol, user, canRunCommand;
 setCanRunCommand(false);
 
 function setCanRunCommand(can) {
@@ -66,7 +66,7 @@ function connectWs(_ws) {
 	if (_ws !== ws) {
 		return;
 	}
-	_ws = new WebSocket('ws://' + host + '/api/v1/notifications');
+	_ws = new WebSocket(((protocol === 'https:') ? 'wss://' : 'ws://') + host + '/api/v1/notifications');
 	ws = _ws;
 	
 	ws.onmessage = _msg => {
@@ -132,6 +132,7 @@ onmessage = msg => {
 	switch (msg[0]) {
 		case 'init':
 			host = msg[1];
+			protocol = msg[2];
 			refreshToken(() => connectWs());
 			break;
 		case 'user':
