@@ -179,7 +179,7 @@ app.post('/api/v1/run',
 				}
 				argsStr = JSON.stringify(argsObj);
 			} catch(e) {
-				res.sendStatus(400);
+				res.status(400);
 				res.write(e.message);
 				res.end();
 				return;				
