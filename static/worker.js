@@ -58,7 +58,14 @@ function sendCommand(cmd, args) {
 		buffer += added;
 		let i;
 		while ((i = buffer.indexOf('\n')) >= 0) {
-			addContent(buffer.substr(0, i));
+			if (buffer.charCodeAt(0) !== 1) {
+				const data = JSON.parse(buffer.substr(0, i));
+				switch (data.type) {
+					case 'return':
+						addContentParsed(data.data);
+						break;
+				}
+			}
 			if (i === buffer.length - 1) {
 				buffer = '';
 			} else {
@@ -118,13 +125,8 @@ function connectWs(_ws) {
 		}
 	};
 
-	//ws.onopen = () => {
-	//	addContent('Connection to MoonHack initialized');	
-	//};
-
 	ws.onclose = e => {
 		setCanRunCommand(false);
-		//addContent('Connection to MoonHack closed: ' + e.code);
 		setTimeout(() => connectWs(_ws), 2000);
 	};
 
@@ -171,7 +173,7 @@ onmessage = msg => {
 			setCanRunCommand(false);
 			ws.send(JSON.stringify({
 				command: 'userswitch',
-				user: msg[1]
+				user: msg[1],
 			}));
 			break;
 		case 'lsuser':
@@ -180,12 +182,12 @@ onmessage = msg => {
 		case 'mkuser':
 			setCanRunCommand(false);
 			sendRequest('post', '/api/v1/users', {
-				username: msg[1]
+				username: msg[1],
 			}, xhr => {
 				if (xhr.status >= 200 && xhr.status <= 299) {
-					addContent("user created");
+					addContent('user created');
 				} else {
-					addContent("could not create user");
+					addContent('could not create user');
 				}
 				reconnectWS();
 				setCanRunCommand(true);
@@ -194,12 +196,12 @@ onmessage = msg => {
 		case 'rmuser':
 			setCanRunCommand(false);
 			sendRequest('delete', '/api/v1/users', {
-				username: msg[1]
+				username: msg[1],
 			}, xhr => {
 				if (xhr.status >= 200 && xhr.status <= 299) {
-					addContent("user retired");
+					addContent('user retired');
 				} else {
-					addContent("could not retired user");
+					addContent('could not retired user');
 				}
 				reconnectWS();
 				setCanRunCommand(true);
@@ -207,7 +209,7 @@ onmessage = msg => {
 			break;
 		case 'command':
 			if (!user) {
-				addContent("please select a user first");
+				addContent('please select a user first');
 				return;
 			}
 			setCanRunCommand(false);
@@ -255,6 +257,37 @@ function postShell() {
 	const c = shellContent.join('\n') + '\n';
 	shellContent = [];
 	postMessage(['shell',c]);
+}
+
+function addContentParsed(d) {
+	if (d instanceof Array) {
+		if (d.length === 2 && (d[0] === true || d[0] === false)) {
+			addContentFormatted(d[0] ? 'Success': 'Failure');
+			addContentFormatted(d[1]);
+			return;
+		} else if (d.length === 1) {
+			addContentFormatted(d[0]);
+			return;
+		}
+	} else if (typeof d === 'object') {
+		const k = Object.keys(d).length;
+		if (k === 1 && d.msg !== undefined) {
+			addContentFormatted(d.msg);
+			return;
+		} else if (k === 2 && d.ok !== undefined && d.msg !== undefined) {
+			addContentParsed([d.ok, d.msg]);
+			return;
+		}
+	}
+	addContentFormatted(d);
+}
+
+function addContentFormatted(d) {
+	if (typeof d === 'string') {
+		addContent(d);
+	} else {
+		addContent(JSON.stringify(d, null, '\t'));
+	}
 }
 
 function addContent(content) {
