@@ -225,10 +225,18 @@ app.get('/api/v1/users',
 		});
 	});
 
+const VALID_USER_REGEX = /^[a-z_0-9]+$/;
+
 app.post('/api/v1/users',
 	passport.authenticate('jwt'),
 	(req, res) => {
 		res.header('Cache-Control', 'private');
+
+		if (!VALID_USER_REGEX.test(req.body.username)) {
+			res.status(400);
+			res.send('Bad username');
+			res.end();
+		}
 
 		const user = new User({
 			owner: req.user.id,
