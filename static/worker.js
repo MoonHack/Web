@@ -72,19 +72,23 @@ function sendCommand(cmd, args) {
 		let i;
 		while ((i = buffer.indexOf('\n')) >= 0) {
 			if (buffer.charCodeAt(0) !== 1) {
-				const data = JSON.parse(buffer.substr(0, i).trim());
-				switch (data.type) {
-					case 'return':
-						addContentParsed(data.data);
-						break;
-					case 'print':
-						if (data.initial) {
+				try {
+					const data = JSON.parse(buffer.substr(0, i).trim());
+					switch (data.type) {
+						case 'return':
 							addContentParsed(data.data);
-						}
-						break;
-					case 'error':
-						addContentParsed([false, data.data]);
-						break;
+							break;
+						case 'print':
+							if (data.initial) {
+								addContentParsed(data.data);
+							}
+							break;
+						case 'error':
+							addContentParsed([false, data.data]);
+							break;
+					}
+				} catch(e) {
+					addContent(`Error ${e.message} parsing line: ${buffer.substr(0, i).trim()}`);
 				}
 			} else {
 				const status = buffer.substr(1, i - 1).trim();
