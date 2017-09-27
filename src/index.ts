@@ -236,6 +236,7 @@ app.post('/api/v1/users',
 			res.status(400);
 			res.send('Bad username');
 			res.end();
+			return;
 		}
 
 		const user = new User({
