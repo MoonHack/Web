@@ -58,7 +58,6 @@ export function run(caller: string,
 			out.write(message.content);
 			if (message.content[0] === 1) {
 				stopConsumer();
-				return;
 			}
 		}, {
 			noAck: true,
