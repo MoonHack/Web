@@ -42,6 +42,12 @@ const notificationExchange = connection.declareExchange(
 	}
 );
 
+function asyncHandler(cb: (req: any, res: any) => Promise<void> | void) {
+	return function (req: any, res: any, next: (err: Error) => void) {
+		Bluebird.resolve(cb(req, res)).catch(next);
+	}
+}
+
 function signReqJwt(req: any, res: any): Promise<boolean> {
 	if (!req.user) {
 		res.cookie('jwt', '', {
@@ -161,7 +167,7 @@ app.get('/',
 
 app.post('/api/v1/run',
 	passport.authenticate('jwt'),
-	(req, res) => {
+	asyncHandler((req, res) => {
 		res.header('Cache-Control', 'private');
 
 		const username = req.body.username;
@@ -191,7 +197,7 @@ app.post('/api/v1/run',
 			}
 		}
 
-		canAccountUseUser(req, username)
+		return canAccountUseUser(req, username)
 		.then(allowed => {
 			if (!allowed) {
 				res.sendStatus(403);
@@ -199,15 +205,15 @@ app.post('/api/v1/run',
 				return;
 			}
 			return run(username, script, argsStr, res);
-		})
-	});
+		});
+	}));
 
 app.get('/api/v1/users',
 	passport.authenticate('jwt'),
-	(req, res) => {
+	asyncHandler((req, res) => {
 		res.header('Cache-Control', 'private');
 
-		User.find({
+		return User.find({
 			owner: req.user.id,
 		})
 		.then(users => {
@@ -223,13 +229,13 @@ app.get('/api/v1/users',
 			res.send(JSON.stringify(users));
 			res.end();
 		});
-	});
+	}));
 
 const VALID_USER_REGEX = /^[a-z_0-9]+$/;
 
 app.post('/api/v1/users',
 	passport.authenticate('jwt'),
-	(req, res) => {
+	asyncHandler((req, res) => {
 		res.header('Cache-Control', 'private');
 
 		if (!VALID_USER_REGEX.test(req.body.username)) {
@@ -243,7 +249,8 @@ app.post('/api/v1/users',
 			owner: req.user.id,
 			name: req.body.username,
 		});
-		user.save()
+
+		return user.save()
 		.then(() => {
 			signReqJwt(req, res)
 			.then(() => res.end());
@@ -252,14 +259,14 @@ app.post('/api/v1/users',
 			res.sendStatus(400);
 			res.end();
 		});
-	});
+	}));
 
 app.delete('/api/v1/users',
 	passport.authenticate('jwt'),
-	(req, res) => {
+	asyncHandler((req, res) => {
 		res.header('Cache-Control', 'private');
 
-		User.findOneAndUpdate({
+		return User.findOneAndUpdate({
 			owner: req.user.id,
 			name: req.body.username,
 			retiredAt: { $exists: false },
@@ -270,14 +277,15 @@ app.delete('/api/v1/users',
 		})
 		.then(user => {
 			if (user) {
-				signReqJwt(req, res)
+				return signReqJwt(req, res)
 				.then(() => res.end());
 			} else {
 				res.sendStatus(404);
 				res.end();
 			}
-		})
-	})
+			return;
+		});
+	}));
 
 app.ws('/api/v1/notifications',
 	(ws, req) => {
@@ -285,7 +293,6 @@ app.ws('/api/v1/notifications',
 			function sendObject(obj: any): void {
 				ws.send(JSON.stringify(obj));
 			}
-			req.user = account;
 
 			if (err || !account) {
 				sendObject({
@@ -297,6 +304,8 @@ app.ws('/api/v1/notifications',
 				ws.close();
 				return;
 			}
+
+			req.user = account;
 
 			sendObject({
 				type: 'result',
@@ -355,7 +364,7 @@ app.ws('/api/v1/notifications',
 								}
 							);
 							queue = q;
-							connection.completeConfiguration()
+							return connection.completeConfiguration()
 							.then(() => q.bind(notificationExchange, username))
 							.then(() => q.activateConsumer((message) => {
 								sendObject({
@@ -365,7 +374,13 @@ app.ws('/api/v1/notifications',
 								});
 							}, {
 								noAck: true,
-							}));
+							}))
+							.return();
+						})
+						.catch(err => {
+							console.error(err.stack || err);
+							close();
+							ws.close();
 						});
 						break;
 				}
@@ -379,49 +394,51 @@ app.ws('/api/v1/notifications',
 
 app.post('/api/v1/auth/refresh',
 	passport.authenticate('jwt'),
-	(req, res) => {
+	asyncHandler((req, res) => {
 		res.header('Cache-Control', 'private');
 
-		signReqJwt(req, res)
+		return signReqJwt(req, res)
 		.then(ok => {
 			if (!ok) {
 				res.sendStatus(401);
 			}
 			res.end();
 		});
-	});
+	}));
 
 app.get('/api/v1/auth/steam',
 	passport.authenticate('steam', { failureRedirect: '/' }),
-	(_req, res) => {
+	asyncHandler((_req, res) => {
 		res.header('Cache-Control', 'private');
 
 		res.redirect('/');
-	});
+	}));
 
 app.get('/api/v1/auth/steam/return',
 	passport.authenticate('steam', { failureRedirect: '/' }),
-	(req, res) => {
+	asyncHandler((req, res) => {
 		res.header('Cache-Control', 'private');
 
-		signReqJwt(req, res)
+		return signReqJwt(req, res)
 		.then(() => res.redirect('/'));
-	});
+	}));
 
 app.post('/api/v1/auth/kill',
 	passport.authenticate('jwt'),
-	(req, res) => {
+	asyncHandler((req, res) => {
 		res.header('Cache-Control', 'private');
 
-		Account.findOneAndUpdate({
+		return Account.findOneAndUpdate({
 			_id: req.user.id,
 		}, {
 			$set: {
 				miniat: Math.ceil(Date.now() / 1000) + 10,
 			},
+		})
+		.then(() => {
+			res.end();
 		});
-		res.end();
-	});
+	}));
 
 app.use('/static', express.static('static'));
 
