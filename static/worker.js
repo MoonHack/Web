@@ -72,8 +72,9 @@ function sendCommand(cmd, args) {
 		let i;
 		while ((i = buffer.indexOf('\n')) >= 0) {
 			if (buffer.charCodeAt(0) !== 1) {
+				const bufferData = buffer.substr(0, i).trim();
 				try {
-					const data = JSON.parse(buffer.substr(0, i).trim());
+					const data = JSON.parse(bufferData);
 					switch (data.type) {
 						case 'return':
 							addContentParsed(data.data);
@@ -88,7 +89,7 @@ function sendCommand(cmd, args) {
 							break;
 					}
 				} catch(e) {
-					addContent(`Error ${e.message} parsing line: ${buffer.substr(0, i).trim()}`);
+					addContent(`Error ${e.message} parsing line: ${bufferData}`);
 				}
 			} else {
 				const status = buffer.substr(1, i - 1).trim();
