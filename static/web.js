@@ -36,9 +36,6 @@ function initialize() {
 	sInput.addEventListener('keyup', e => {
 		if (e.keyCode === 10 || e.keyCode === 13) {
 			const t = sInput.value.trim();
-			if (t === 'clear') {
-				sContent.innerHTML = '';
-			}
 			sInput.value = '';
 			const i = t.indexOf(' ');
 			let cmd, args;
@@ -62,6 +59,10 @@ function initialize() {
 					break;
 				case 'retire_user':
 					worker.postMessage(['rmuser', args]);
+					break;
+				case 'clear':
+					sContent.innerHTML = '';
+					addContent(`> ${t}`);
 					break;
 				default:
 					worker.postMessage(['command',cmd,args]);
