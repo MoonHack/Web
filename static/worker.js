@@ -381,6 +381,9 @@ function addContentFormatted(d) {
 }
 
 function addContent(content) {
+	content = content.replace(/&/g, '&amp;')
+					.replace(/</g, '&lt;')
+					.replace(/>/g, '&gt;');
 	shellContent.push(content);
 	if (shellDebounceTimer !== null) {
 		clearTimeout(shellDebounceTimer);
