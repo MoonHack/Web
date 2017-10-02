@@ -480,6 +480,9 @@ function initialize() {
 				}
 				break;
 			case 'ArrowUp':
+				if (commandHistory.length === 0) {
+					return;
+				}
 				if (commandHistoryPos > 0) {
 					--commandHistoryPos;
 				}
@@ -487,6 +490,9 @@ function initialize() {
 				cursorPos = typedText.length;
 				break;
 			case 'ArrowDown':
+				if (commandHistory.length === 0) {
+					return;
+				}
 				if (commandHistoryPos < commandHistory.length - 1) {
 					++commandHistoryPos;
 				} else if (commandHistoryPos >= commandHistory.length) {
