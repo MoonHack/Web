@@ -333,10 +333,6 @@ function initialize() {
 		queueRender();
 	}
 
-	for (let i = 0; i < 100; i++) {
-		addContent([`[#FF0000]L[#0000FF]I[/]NE[/] ${i}`.repeat(50),'b']);
-	}
-
 	function clearContent() {
 		cliText = [];
 		purgeTextures(cliTextSplit);
