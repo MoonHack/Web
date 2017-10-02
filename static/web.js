@@ -411,18 +411,24 @@ function initialize() {
 	document.addEventListener('mousewheel', onmousewheel);
 	document.addEventListener('wheel', onmousewheel);
 
+	document.addEventListener('paste', e => {
+		console.log(e);
+	});
+
 	document.addEventListener('keydown', e => {
-		e.preventDefault();
 		cursorForceOn();
+		let needRender = false;
 		switch (e.key) {
 			case 'Enter':
 				if (!canInput) {
-					return;
+					needRender = false;
+					break;
 				}
 				const t = typedText.trim();
 				if (t === '') {
 					addContent(`${user}$`);
-					return;
+					needRender = false;
+					break;
 				}
 				commandHistory.push(t);
 				while (commandHistory.length > 100) {
@@ -464,6 +470,7 @@ function initialize() {
 						worker.postMessage(['command',cmd,args]);
 						break;
 				}
+				needRender = false;
 				break;
 			case 'Backspace':
 				if (cursorPos > 0) {
@@ -483,7 +490,8 @@ function initialize() {
 				break;
 			case 'ArrowUp':
 				if (commandHistory.length === 0) {
-					return;
+					needRender = false;
+					break;
 				}
 				if (commandHistoryPos > 0) {
 					--commandHistoryPos;
@@ -493,7 +501,8 @@ function initialize() {
 				break;
 			case 'ArrowDown':
 				if (commandHistory.length === 0) {
-					return;
+					needRender = false;
+					break;
 				}
 				if (commandHistoryPos < commandHistory.length - 1) {
 					++commandHistoryPos;
@@ -532,11 +541,14 @@ function initialize() {
 					typedText = typedText.substr(0, cursorPos) + e.key + typedText.substr(cursorPos);
 					cursorPos++;
 				} else {
-					return;
+					needRender = false;
 				}
 				break;
 		}
-		queueRender();
+		e.preventDefault();
+		if (needRender) {
+			queueRender();
+		}
 	});
 
 	needsResize = true;
