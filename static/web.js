@@ -12,8 +12,8 @@ function initialize() {
 
 	let user = '', canInput = false;
 
-	const lineHeight = 20;
-	const lineSpacing = 5;
+	const lineHeight = 12;
+	const lineSpacing = 4;
 	const totalLineHeight = lineHeight + lineSpacing;
 
 	let lineCount = 20;
@@ -119,7 +119,7 @@ function initialize() {
 	function renderTextToTexture(text) {
 		sTmpCanvasCtx.fillStyle = '#000000';
 		sTmpCanvasCtx.fillRect(0, 0, sTmpCanvas.width, sTmpCanvas.height);
-		sTmpCanvasCtx.font = '30px Arial';
+		sTmpCanvasCtx.font = '16px white_rabbitregular';
 		sTmpCanvasCtx.fillStyle = '#FFFFFF';
 		sTmpCanvasCtx.fillText(text, 0, sTmpCanvas.height);
 		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, sTmpCanvas);
