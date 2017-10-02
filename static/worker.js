@@ -1,12 +1,16 @@
 'use strict';
 
 let ws, host, protocol, user, canRunCommand, wsErrored, width, height;
+let shellContent = ['shell'], shellDebounceTimer = null;
+
 wsErrored = true;
 console.log('Worker initialized');
 setCanRunCommand(false);
 
 function setCanRunCommand(can) {
 	canRunCommand = can;
+	clearTimeout(shellDebounceTimer);
+	postShell();
 	postMessage(['canInput', canRunCommand]);
 	updateStatus();
 }
@@ -369,8 +373,6 @@ function updateStatus() {
 }
 
 updateStatus();
-
-let shellContent = ['shell'], shellDebounceTimer = null;
 
 function postShell() {
 	shellDebounceTimer = null;

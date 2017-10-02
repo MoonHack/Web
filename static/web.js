@@ -342,6 +342,9 @@ function initialize() {
 			const data = wrapText(content[i]);
 			cliTextSplit = cliTextSplit.concat(data);
 		}
+		if (cliTextSplit.length > 2000) {
+			cliTextSplit.splice(0, cliTextSplit.length - 2000);
+		}
 		recomputeView();
 		queueRender();
 	}
@@ -418,6 +421,7 @@ function initialize() {
 					commandHistory.shift();	
 				}
 				commandHistoryPos = commandHistory.length;
+				canInput = false;
 				typedText = '';
 				cursorPos = 0;
 				const i = t.indexOf(' ');
@@ -429,7 +433,6 @@ function initialize() {
 					cmd = t;
 					args = '';
 				}
-				canInput = false;
 				addContent(`${user}$ ${t}`);
 				switch (cmd) {
 					case 'user':
