@@ -83,7 +83,7 @@ function initialize() {
 		sTmpCanvas.height = lineHeight;
 		gl.uniform2f(uResolution, sCanvas.width, sCanvas.height);
 		gl.viewport(0, 0, sCanvas.width, sCanvas.height);
-		lineCount = Math.floor(height / totalLineHeight);
+		lineCount = Math.floor(height / totalLineHeight) - 1; // Reserve 1 line for prompt
 		charsPerLine = Math.floor(width / charWidth);
 		recomputeLines();
 	}
