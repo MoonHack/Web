@@ -22,6 +22,9 @@ function initialize() {
 	let lineCount;
 	let charsPerLine;
 
+	let commandHistoryPos = 0;
+	let commandHistory = [];
+
 	let cursorPos = 0;
 	let typedText = '';
 	let cliText = [];
@@ -237,6 +240,7 @@ function initialize() {
 			prevY = y;
 		}
 
+		drawCursor();
 		
 		gl.activeTexture(gl.TEXTURE1);
 		gl.uniform1i(uTexture, 1);
@@ -251,8 +255,6 @@ function initialize() {
 			]),
 			gl.STATIC_DRAW);
 		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-
-		drawCursor();
 
 		requestAnimationFrame(render);
 	}
@@ -329,6 +331,8 @@ function initialize() {
 					return;
 				}
 				const t = typedText.trim();
+				commandHistory.push(t);
+				commandHistoryPos = commandHistory.length;
 				typedText = '';
 				cursorPos = 0;
 				const i = t.indexOf(' ');
@@ -380,8 +384,18 @@ function initialize() {
 				}
 				break;
 			case 'ArrowUp':
+				if (commandHistoryPos > 0) {
+					--commandHistoryPos;
+				}
+				typedText = commandHistory[commandHistoryPos];
 				break;
 			case 'ArrowDown':
+				if (commandHistoryPos < commandHistory.length - 1) {
+					++commandHistoryPos;
+				} else if (commandHistoryPos >= commandHistory.length) {
+					commandHistoryPos = commandHistory.length - 1;
+				}
+				typedText = commandHistory[commandHistoryPos];
 				break;
 			case 'Delete':
 				typedText = typedText.substr(0, cursorPos) + typedText.substr(cursorPos + 1);
@@ -389,6 +403,7 @@ function initialize() {
 			case 'Escape':
 				typedText = '';
 				cursorPos = 0;
+				commandHistoryPos = commandHistory.length;
 				break;
 			default:
 				if (e.key && e.key.length === 1) {
