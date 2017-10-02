@@ -412,10 +412,17 @@ function initialize() {
 	document.addEventListener('wheel', onmousewheel);
 
 	document.addEventListener('paste', e => {
-		console.log(e);
+		e.preventDefault();
+		const text = e.clipboardData.getData('text/plain');
+		if (!text) {
+			return;
+		}
+		typedText = typedText.substr(0, cursorPos) + text + typedText.substr(cursorPos);
+		cursorPos += text.length;
+		queueRender();
 	});
 
-	document.addEventListener('keydown', e => {
+	document.addEventListener('keypress', e => {
 		cursorForceOn();
 		let needRender = true;
 		switch (e.key) {
@@ -537,8 +544,11 @@ function initialize() {
 				cursorPos = typedText.length;
 				break;
 			default:
-				if (e.key && e.key.length === 1) {
-					typedText = typedText.substr(0, cursorPos) + e.key + typedText.substr(cursorPos);
+				if (e.ctrlKey || e.altKey) {
+					return;
+				}
+				if (e.charCode) {
+					typedText = typedText.substr(0, cursorPos) + String.fromCharCode(e.charCode) + typedText.substr(cursorPos);
 					cursorPos++;
 				} else {
 					return;
