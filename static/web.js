@@ -417,7 +417,7 @@ function initialize() {
 
 	document.addEventListener('keydown', e => {
 		cursorForceOn();
-		let needRender = false;
+		let needRender = true;
 		switch (e.key) {
 			case 'Enter':
 				if (!canInput) {
@@ -541,7 +541,7 @@ function initialize() {
 					typedText = typedText.substr(0, cursorPos) + e.key + typedText.substr(cursorPos);
 					cursorPos++;
 				} else {
-					needRender = false;
+					return;
 				}
 				break;
 		}
