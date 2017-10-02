@@ -373,8 +373,10 @@ function initialize() {
 				addContent(msg);
 				break;
 			case 'canInput':
-				canInput = msg[1];
-				queueRender();
+				if (canInput !== msg[1]) {
+					canInput = msg[1];
+					queueRender();
+				}
 				break;
 			case 'init':
 				worker.postMessage(['init', document.location.host, document.location.protocol]);
