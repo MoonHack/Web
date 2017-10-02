@@ -90,7 +90,7 @@ function initialize() {
 		for (let i = 0; i < str.length; i++) {
 			const c = str[i];
 			if (inCC) {
-				if (c === ']') {
+				if (c === '>') {
 					inCC = false;
 					if (_cc == '/') {
 						formatting.shift();	
@@ -99,7 +99,7 @@ function initialize() {
 					}
 				}
 				_cc += c;
-			} else if (c === '[') {
+			} else if (c === '<') {
 				inCC = true;
 				_cc = '';
 				_line.push([_str,formatting[0]]);
