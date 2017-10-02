@@ -330,6 +330,7 @@ onmessage = msg => {
 		case 'command':
 			if (!user) {
 				addContent('please select a user first');
+				setCanRunCommand(true);
 				return;
 			}
 			setCanRunCommand(false);
