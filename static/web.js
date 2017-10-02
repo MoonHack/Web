@@ -504,6 +504,12 @@ function initialize() {
 				cursorPos = 0;
 				commandHistoryPos = commandHistory.length;
 				break;
+			case 'Home':
+				cursorPos = 0;
+				break;
+			case 'End':
+				cursorPos = typedText.length;
+				break;
 			default:
 				if (e.key && e.key.length === 1) {
 					typedText = typedText.substr(0, cursorPos) + e.key + typedText.substr(cursorPos);
