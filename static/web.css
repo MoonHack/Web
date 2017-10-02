@@ -1,8 +1,8 @@
 * {
 	font-family: white_rabbitregular;
 	line-height: 16px;
-	color: rgb(119, 174, 238);
-	background-color: rgb(16, 18, 21);
+	color: #77AEEE;
+	background-color: #101215;
 	padding: 0;
 	margin: 0;
 	overflow: hidden;
@@ -66,7 +66,7 @@ td {
 	border: none;
 	padding-top: 1px;
 	padding-bottom: 1px;
-	border-top: 2px solid rgb(119, 174, 238);
+	border-top: 2px solid #77AEEE;
 }
 #shellInputLine {
 	width: 100%;
@@ -77,20 +77,6 @@ td {
 }
 #shellInputLine > * {
 	display: table-cell;
-}
-
-::-webkit-scrollbar {
-    width: 18px;
-}
-
-::-webkit-scrollbar-track {
-	background-color: rgb(33,50,71);
-	border-left: 9px solid rgb(16, 18, 21);
-}
-
-::-webkit-scrollbar-thumb {
-	background-color: rgb(64,105,151); 
-	border-left: 9px solid rgb(16, 18, 21);
 }
 
 @font-face{

@@ -47,7 +47,9 @@ function initialize() {
 	const uResolution = gl.getUniformLocation(program, 'u_resolution');
 	const uTexture = gl.getUniformLocation(program, 'u_texture');
 	const uFixedColor = gl.getUniformLocation(program, 'u_fixedcolor');
-	gl.clearColor(0.0, 0.0, 0.0, 1.0);
+
+	// 101215 rgb(16, 18, 21)
+	gl.clearColor(16.0/255.0, 18.0/255.0, 21.0/255.0, 1.0);
 
 	const posBuffer = gl.createBuffer();
 	gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
@@ -202,7 +204,7 @@ function initialize() {
 	gl.enableVertexAttribArray(aTexPosition);
 
 	function renderTextToTexture(text, cb) {
-		sTmpCanvasCtx.fillStyle = '#000000';
+		sTmpCanvasCtx.fillStyle = '#101215';
 		sTmpCanvasCtx.fillRect(0, 0, sTmpCanvas.width, sTmpCanvas.height);
 		sTmpCanvasCtx.font = '16px white_rabbitregular';
 		sTmpCanvasCtx.textBaseline = 'top';
@@ -212,7 +214,7 @@ function initialize() {
 			if (!t|| !t[0]) {
 				continue;
 			}
-			sTmpCanvasCtx.fillStyle = t[1] || '#00FF00';
+			sTmpCanvasCtx.fillStyle = t[1] || '#77AEEE';
 			sTmpCanvasCtx.fillText(t[0], x, 0);
 			x += t[0].length * charWidth;
 		}
