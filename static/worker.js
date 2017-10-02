@@ -1,6 +1,6 @@
 'use strict';
 
-let ws, host, protocol, user, canRunCommand, wsErrored;
+let ws, host, protocol, user, canRunCommand, wsErrored, width, height;
 wsErrored = true;
 console.log('Worker initialized');
 setCanRunCommand(false);
@@ -136,6 +136,8 @@ function sendCommand(cmd, args) {
 		username: user,
 		script: cmd,
 		args: args,
+		width: width,
+		height: height,
 	})
 	.then((response) => {
 		if (!response.ok) {
@@ -328,6 +330,10 @@ onmessage = msg => {
 			}
 			setCanRunCommand(false);
 			sendCommand(msg[1], msg[2]);
+			break;
+		case 'resize':
+			width = msg[1];
+			height = msg[2];
 			break;
 	}
 }

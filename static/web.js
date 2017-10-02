@@ -89,6 +89,7 @@ function initialize() {
 		lineCount = Math.floor(height / totalLineHeight) - 1; // Reserve 1 line for prompt
 		charsPerLine = Math.floor(width / charWidth);
 		recomputeLines();
+		worker.postMessage(['resize', charsPerLine, lineCount]);
 	}
 
 	const texPosBuffer = gl.createBuffer();
