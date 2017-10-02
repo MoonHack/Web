@@ -412,6 +412,8 @@ function initialize() {
 	document.addEventListener('wheel', onmousewheel);
 
 	document.addEventListener('keydown', e => {
+		e.preventDefault();
+		cursorForceOn();
 		switch (e.key) {
 			case 'Enter':
 				if (!canInput) {
@@ -534,8 +536,6 @@ function initialize() {
 				}
 				break;
 		}
-		e.preventDefault();
-		cursorForceOn();
 		queueRender();
 	});
 
