@@ -7,12 +7,17 @@ function initialize() {
 
 	const worker = new Worker('static/worker.js');
 
+	let user = '';
+
 	worker.onmessage = msg => {
 		msg = msg.data;
 		switch(msg[0]) {
 			case 'status':
 				sStatus.innerHTML = msg[1];
 				document.title = msg[2];
+				break;
+			case 'user':
+				user = msg[1];
 				break;
 			case 'shell':
 				sContent.innerHTML += msg[1];
@@ -29,7 +34,6 @@ function initialize() {
 
 	function addContent(content) {
 		sContent.innerHTML += content + '\n';
-
 		sContent.scrollTop = sContent.scrollHeight - sContent.clientHeight;
 	}
 
@@ -46,13 +50,14 @@ function initialize() {
 				cmd = t;
 				args = '';
 			}
-			addContent(`> ${t}`);
+			addContent(`${user}$ ${t}`);
 			switch (cmd) {
 				case 'user':
 					if (args !== '') {
 						worker.postMessage(['user',args]);
 						break;
 					}
+					worker.postMessage(['lsuser']);
 					break;
 				case 'create_user':
 					worker.postMessage(['mkuser', args]);
@@ -62,7 +67,7 @@ function initialize() {
 					break;
 				case 'clear':
 					sContent.innerHTML = '';
-					addContent(`> ${t}`);
+					addContent(`${user}$ ${t}`);
 					break;
 				default:
 					worker.postMessage(['command',cmd,args]);

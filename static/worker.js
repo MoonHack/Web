@@ -166,10 +166,12 @@ function connectWs(_ws) {
 							addContent('Error switching user to ' + msg.user + ': ' + msg.error);
 							if (user === msg.user) {
 								user = null;
+								postMessage(['user','']);
 							}
 						} else if (user !== msg.user) {
 							addContent('Switched user to ' + msg.user);
 							user = msg.user;
+							postMessage(['user',user]);
 						}
 						setCanRunCommand(true);
 						break;
