@@ -24,7 +24,6 @@ function initialize() {
 
 	let cursorPos = 0;
 	let typedText = '';
-	let renderCursorPos = 0;
 	let cliText = [];
 	let lineBuffer = [];
 	let cliScreenView = [];
@@ -142,7 +141,7 @@ function initialize() {
 		gl.activeTexture(gl.TEXTURE2);
 	
 		let y = totalLineHeight * cliScreenView.length;
-		let x = charWidth * renderCursorPos + 1;
+		let x = charWidth * (cursorPos + 2 + user.length) + 1;
 		let height = lineHeight;
 		let width = charWidth;
 
@@ -241,13 +240,7 @@ function initialize() {
 		
 		gl.activeTexture(gl.TEXTURE1);
 		gl.uniform1i(uTexture, 1);
-		if (canInput) {
-			renderTextToTexture(`${user}$ ${typedText}`);
-			renderCursorPos = cursorPos + 2 + user.length;
-		} else {
-			renderTextToTexture('...');
-			renderCursorPos = 3;
-		}
+		renderTextToTexture(`${user}$ ${typedText}`);
 		prevY += lineSpacing;
 		gl.bufferData(gl.ARRAY_BUFFER,
 			new Float32Array([
@@ -332,6 +325,9 @@ function initialize() {
 	document.onkeydown = e => {
 		switch (e.key) {
 			case 'Enter':
+				if (!canInput) {
+					return;
+				}
 				const t = typedText.trim();
 				typedText = '';
 				cursorPos = 0;
