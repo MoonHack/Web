@@ -418,6 +418,10 @@ function initialize() {
 					return;
 				}
 				const t = typedText.trim();
+				if (t === '') {
+					addContent(`${user}$`);
+					return;
+				}
 				commandHistory.push(t);
 				while (commandHistory.length > 100) {
 					commandHistory.shift();	
