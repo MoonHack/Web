@@ -215,8 +215,11 @@ function initialize() {
 				continue;
 			}
 			sTmpCanvasCtx.fillStyle = t[1] || '#77AEEE';
-			sTmpCanvasCtx.fillText(t[0], x, 0);
-			x += t[0].length * charWidth;
+			const tx = t[0];
+			for (let j = 0; j < tx.length; j++) {
+				sTmpCanvasCtx.fillText(tx[j], x, 0);
+				x += charWidth;
+			}
 		}
 		if (cb) cb(sTmpCanvasCtx);
 		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, sTmpCanvas);
@@ -426,6 +429,7 @@ function initialize() {
 					cmd = t;
 					args = '';
 				}
+				canInput = false;
 				addContent(`${user}$ ${t}`);
 				switch (cmd) {
 					case 'user':
@@ -443,6 +447,7 @@ function initialize() {
 						break;
 					case 'clear':
 						clearContent();
+						canInput = true;
 						break;
 					default:
 						worker.postMessage(['command',cmd,args]);
