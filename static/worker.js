@@ -23,9 +23,12 @@ function reconnectWS() {
 	connectWs(ws);
 }
 
+let wsQueue = [];
 function sendObject(obj) {
 	if (ws && ws.readyState === 1) {
 		ws.send(JSON.stringify(obj));
+	} else {
+		wsQueue.push(obj);
 	}
 }
 setInterval(() => {
@@ -240,10 +243,15 @@ function connectWs(_ws) {
 		}
 	};
 
-	ws.onclose = e => {
+	ws.onclose = () => {
 		setCanRunCommand(false);
 		setTimeout(() => connectWs(_ws), 2000);
 	};
+
+	ws.onopen = () => {
+		wsQueue.forEach(obj => ws.send(JSON.stringify(obj)));
+		wsQueue = [];
+	}
 
 	ws.onerror = e => {
 		setCanRunCommand(false);
