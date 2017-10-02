@@ -24,7 +24,7 @@ function reconnectWS() {
 }
 
 function sendObject(obj) {
-	if (ws) {
+	if (ws && ws.readyState === 1) {
 		ws.send(JSON.stringify(obj));
 	}
 }

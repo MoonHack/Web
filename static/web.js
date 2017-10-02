@@ -422,6 +422,93 @@ function initialize() {
 		queueRender();
 	});
 
+	document.addEventListener('keydown', e => {
+		cursorForceOn();
+		let needRender = true;
+		switch (e.key) {
+			case 'Backspace':
+				if (cursorPos > 0) {
+					typedText = typedText.substr(0, cursorPos - 1) + typedText.substr(cursorPos);
+					cursorPos--;
+				} else {
+					needRender = false;
+				}
+				break;
+			case 'ArrowLeft':
+				if (cursorPos > 0) {
+					cursorPos--;
+				} else {
+					needRender = false;
+				}
+				break;
+			case 'ArrowRight':
+				if (cursorPos < typedText.length) {
+					cursorPos++;
+				} else {
+					needRender = false;
+				}
+				break;
+			case 'ArrowUp':
+				if (commandHistory.length === 0) {
+					needRender = false;
+					break;
+				}
+				if (commandHistoryPos > 0) {
+					--commandHistoryPos;
+				}
+				typedText = commandHistory[commandHistoryPos];
+				cursorPos = typedText.length;
+				break;
+			case 'ArrowDown':
+				if (commandHistory.length === 0) {
+					needRender = false;
+					break;
+				}
+				if (commandHistoryPos < commandHistory.length - 1) {
+					++commandHistoryPos;
+				} else if (commandHistoryPos >= commandHistory.length) {
+					commandHistoryPos = commandHistory.length - 1;
+				}
+				typedText = commandHistory[commandHistoryPos];
+				cursorPos = typedText.length;
+				break;
+			case 'PageUp':
+				if (cliScrollOffset < cliTextSplit.length - lineCount) {
+					cliScrollOffset++;
+				} else {
+					needRender = false;
+				}
+				break;
+			case 'PageDown':
+				if (cliScrollOffset > 0) {
+					cliScrollOffset--;
+				} else {
+					needRender = false;
+				}
+				break;
+			case 'Delete':
+				typedText = typedText.substr(0, cursorPos) + typedText.substr(cursorPos + 1);
+				break;
+			case 'Escape':
+				typedText = '';
+				cursorPos = 0;
+				commandHistoryPos = commandHistory.length;
+				break;
+			case 'Home':
+				cursorPos = 0;
+				break;
+			case 'End':
+				cursorPos = typedText.length;
+				break;
+			default:
+				return;
+		}
+		e.preventDefault();
+		if (needRender) {
+			queueRender();
+		}
+	});
+
 	document.addEventListener('keypress', e => {
 		cursorForceOn();
 		let needRender = true;
@@ -478,70 +565,6 @@ function initialize() {
 						break;
 				}
 				needRender = false;
-				break;
-			case 'Backspace':
-				if (cursorPos > 0) {
-					typedText = typedText.substr(0, cursorPos - 1) + typedText.substr(cursorPos);
-					cursorPos--;
-				}
-				break;
-			case 'ArrowLeft':
-				if (cursorPos > 0) {
-					cursorPos--;
-				}
-				break;
-			case 'ArrowRight':
-				if (cursorPos < typedText.length) {
-					cursorPos++;
-				}
-				break;
-			case 'ArrowUp':
-				if (commandHistory.length === 0) {
-					needRender = false;
-					break;
-				}
-				if (commandHistoryPos > 0) {
-					--commandHistoryPos;
-				}
-				typedText = commandHistory[commandHistoryPos];
-				cursorPos = typedText.length;
-				break;
-			case 'ArrowDown':
-				if (commandHistory.length === 0) {
-					needRender = false;
-					break;
-				}
-				if (commandHistoryPos < commandHistory.length - 1) {
-					++commandHistoryPos;
-				} else if (commandHistoryPos >= commandHistory.length) {
-					commandHistoryPos = commandHistory.length - 1;
-				}
-				typedText = commandHistory[commandHistoryPos];
-				cursorPos = typedText.length;
-				break;
-			case 'PageUp':
-				if (cliScrollOffset < cliTextSplit.length - lineCount) {
-					cliScrollOffset++;
-				}
-				break;
-			case 'PageDown':
-				if (cliScrollOffset > 0) {
-					cliScrollOffset--;
-				}
-				break;
-			case 'Delete':
-				typedText = typedText.substr(0, cursorPos) + typedText.substr(cursorPos + 1);
-				break;
-			case 'Escape':
-				typedText = '';
-				cursorPos = 0;
-				commandHistoryPos = commandHistory.length;
-				break;
-			case 'Home':
-				cursorPos = 0;
-				break;
-			case 'End':
-				cursorPos = typedText.length;
 				break;
 			default:
 				if (e.ctrlKey || e.altKey) {
