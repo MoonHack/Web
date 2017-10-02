@@ -156,7 +156,7 @@ function sendCommand(cmd, args) {
 			});
 		}
 
-		const reader = (response.getReader || response.body.getReader)();
+		const reader = response.getReader ? response.getReader() : response.body.getReader();
 		function next() {
 			return reader.read()
 			.then(({ value, done }) => {
