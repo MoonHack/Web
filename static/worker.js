@@ -7,6 +7,7 @@ setCanRunCommand(false);
 
 function setCanRunCommand(can) {
 	canRunCommand = can;
+	postMessage(['canInput', canRunCommand]);
 	updateStatus();
 }
 
@@ -63,12 +64,22 @@ function sendCommand(cmd, args) {
 	setCanRunCommand(false);
 
 	let buffer = '';
-	const decoder = new TextDecoder('utf-8');
+	const decoder = (() => {
+		try {
+			return new TextDecoder('utf-8');
+		} catch(e) {
+			return null;
+		}
+	})();
 	function handleProgress(value) {
 		if (!value) {
 			return;
 		}
-		buffer += decoder.decode(value);
+		if (typeof value === 'string') {
+			buffer += value;
+		} else {
+			buffer += decoder.decode(value);
+		}
 		let i;
 		while ((i = buffer.indexOf('\n')) >= 0) {
 			if (buffer.charCodeAt(0) !== 1) {
@@ -100,7 +111,8 @@ function sendCommand(cmd, args) {
 					case 'INTERNAL':
 						addContentParsed([false, 'Internal error in scripting engine']);
 						break;
-					case 'MEMORY_LIMIT':
+					case 'SOFT_MEMORY_LIMIT':
+					case 'HARD_MEMORY_LIMIT':
 						addContentParsed([false, 'Script hit memory limit and was terminated']);
 						break;
 					case 'SOFT_TIMEOUT':
@@ -133,19 +145,28 @@ function sendCommand(cmd, args) {
 				setCanRunCommand(true);
 			});
 		}
-		const reader = response.body.getReader();
+
+		if (!decoder || ((!response.body || !response.body.getReader) && !response.getReader)) {
+			return response.text()
+			.then(value => {
+				handleProgress(value);
+				setCanRunCommand(true);
+			});
+		}
+
+		const reader = (response.getReader || response.body.getReader)();
 		function next() {
-			reader.read()
+			return reader.read()
 			.then(({ value, done }) => {
 				handleProgress(value);
 				if (done) {
 					setCanRunCommand(true);
 					return;
 				}
-				next();
+				return next();
 			});
 		}
-		next();
+		return next();
 	});
 }
 
@@ -343,13 +364,13 @@ function updateStatus() {
 
 updateStatus();
 
-let shellContent = [], shellDebounceTimer = null;
+let shellContent = ['shell'], shellDebounceTimer = null;
 
 function postShell() {
 	shellDebounceTimer = null;
-	const c = shellContent.join('\n') + '\n';
-	shellContent = [];
-	postMessage(['shell',c]);
+	const c = shellContent;
+	shellContent = ['shell'];
+	postMessage(c);
 }
 
 function addContentParsed(d) {
@@ -386,8 +407,11 @@ function addContentFormatted(d) {
 function addContent(content) {
 	content = (content || '').replace(/&/g, '&amp;')
 							.replace(/</g, '&lt;')
-							.replace(/>/g, '&gt;');
-	shellContent.push(content);
+							.replace(/>/g, '&gt;')
+							.replace(/\r\n/g, '\n')
+							.replace(/\r/g, '\n');
+	content = content.split('\n');
+	shellContent = shellContent.concat(content);
 	if (shellDebounceTimer !== null) {
 		clearTimeout(shellDebounceTimer);
 	}

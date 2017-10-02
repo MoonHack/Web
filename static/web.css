@@ -28,6 +28,16 @@ td {
 	width: calc(100% - 18px);
 }
 
+#textTempCanvas {
+	padding: 9px;
+	width: calc(100% - 18px);
+	/*display: none;*/
+	position: absolute;
+	left: 1100px;
+	top: 10px;
+	border: 1px solid red;
+}
+
 #shellContent {
 	overflow-y: scroll;
 	white-space: pre-wrap;
