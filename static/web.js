@@ -78,14 +78,52 @@ function initialize() {
 	}
 
 	function wrapText(str) {
-		if (str.length <= charsPerLine) {
-			return [[str, null]];
+		let formatting = [];
+		let inCC = false;
+		let _cc = '';
+		let _str = '';
+		let _line = [];
+		let _lineLen = 0;
+		const _lines = [];
+		for (let i = 0; i < str.length; i++) {
+			const c = str[i];
+			if (inCC) {
+				if (c === ']') {
+					inCC = false;
+					if (_cc == '/') {
+						formatting.shift();	
+					} else {
+						formatting.unshift(_cc);
+					}
+				}
+				_cc += c;
+			} else if (c === '[') {
+				inCC = true;
+				_cc = '';
+				_line.push([_str,formatting[0]]);
+				_lineLen += _str.length;
+				_str = '';
+			} else {
+				_str += c;
+				if (_str.length >= charsPerLine - _lineLen) {
+					_line.push([_str,formatting[0]]);
+					_lineLen += _str.length;
+					_str = '';
+				}
+			}
+			if (_lineLen >= charsPerLine) {
+				_lines.push([_line, null]);
+				_line = [];
+				_lineLen = 0;
+			}
 		}
-		let res = [];
-		for (let i = 0; i < str.length; i += charsPerLine) {
-			res.push([str.substr(i, charsPerLine), null]);
+		if (_str.length > 0) {
+			_line.push([_str, formatting[0]]);
 		}
-		return res;
+		if (_line.length > 0) {
+			_lines.push([_line, null]);
+		}
+		return _lines;
 	}
 
 	function recomputeView() {
@@ -167,9 +205,17 @@ function initialize() {
 		sTmpCanvasCtx.fillStyle = '#000000';
 		sTmpCanvasCtx.fillRect(0, 0, sTmpCanvas.width, sTmpCanvas.height);
 		sTmpCanvasCtx.font = '16px white_rabbitregular';
-		sTmpCanvasCtx.fillStyle = '#00FF00';
 		sTmpCanvasCtx.textBaseline = 'top';
-		sTmpCanvasCtx.fillText(text, 0, 0);
+		let x = 0;
+		for (let i = 0; i < text.length; i++) {
+			const t = text[i];
+			if (!t|| !t[0]) {
+				continue;
+			}
+			sTmpCanvasCtx.fillStyle = t[1] || '#00FF00';
+			sTmpCanvasCtx.fillText(t[0], x, 0);
+			x += t[0].length * charWidth;
+		}
 		if (cb) cb(sTmpCanvasCtx);
 		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, sTmpCanvas);
 	}
@@ -240,19 +286,18 @@ function initialize() {
 
 			gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 2*4*4 * y);
 			gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-			gl.finish();
 			y++;
 		}
 		
 		gl.activeTexture(gl.TEXTURE1);
 		gl.uniform1i(uTexture, 1);
 		if (r_lastTypedText !== typedText || r_lastUser !== user || r_lastCursorBlinkOn !== cursorBlinkOn || r_lastCanInput != canInput) {
-			let _r_txt = '$';
+			let _r_txt = '$ ';
 			const _r_cursorPos = cursorPos + 2 + user.length;
 			if (!canInput) {
-				_r_txt = '%';
+				_r_txt = '% ';
 			}
-			renderTextToTexture(`${user}${_r_txt} ${typedText}`, (ctx) => {
+			renderTextToTexture([[user], [_r_txt], [typedText]], (ctx) => {
 				if (cursorBlinkOn) {
 					ctx.fillRect(charWidth * _r_cursorPos, totalLineHeight - cursorHeight, charWidth, cursorHeight);
 				}
@@ -263,7 +308,6 @@ function initialize() {
 		}
 		gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 2*4*4 * y);
 		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-		gl.finish();
 	}
 
 	function queueRender() {
@@ -288,7 +332,7 @@ function initialize() {
 	}
 
 	for (let i = 0; i < 100; i++) {
-		addContent([`LINE ${i}`,'b']);
+		addContent([`[#FF0000]L[#0000FF]I[/]NE[/] ${i}`.repeat(50),'b']);
 	}
 
 	function clearContent() {
