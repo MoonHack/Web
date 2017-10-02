@@ -332,6 +332,9 @@ function initialize() {
 				}
 				const t = typedText.trim();
 				commandHistory.push(t);
+				while (commandHistory.length > 100) {
+					commandHistory.shift();	
+				}
 				commandHistoryPos = commandHistory.length;
 				typedText = '';
 				cursorPos = 0;
