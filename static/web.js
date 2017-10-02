@@ -181,6 +181,8 @@ function initialize() {
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 
+	let r_lastTypedText, r_lastUser, r_lastCursorBlinkOn;
+
 	function render() {
 		renderQueued = false;
 		if (needsResize) {
@@ -244,11 +246,16 @@ function initialize() {
 		
 		gl.activeTexture(gl.TEXTURE1);
 		gl.uniform1i(uTexture, 1);
-		renderTextToTexture(`${user}$ ${typedText}`, (ctx) => {
-			if (cursorBlinkOn) {
-				ctx.fillRect(charWidth * (cursorPos + user.length + 2), totalLineHeight - cursorHeight, charWidth, cursorHeight);
-			}
-		});
+		if (r_lastTypedText !== typedText || r_lastUser !== user || r_lastCursorBlinkOn !== cursorBlinkOn) {
+			renderTextToTexture(`${user}$ ${typedText}`, (ctx) => {
+				if (cursorBlinkOn) {
+					ctx.fillRect(charWidth * (cursorPos + user.length + 2), totalLineHeight - cursorHeight, charWidth, cursorHeight);
+				}
+			});
+			r_lastTypedText = typedText;
+			r_lastUser = user;
+			r_lastCursorBlinkOn = cursorBlinkOn;
+		}
 		gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 2*4*4 * y);
 		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 		gl.finish();
