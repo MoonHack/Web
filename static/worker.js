@@ -411,12 +411,7 @@ function addContentFormatted(d) {
 }
 
 function addContent(content) {
-	content = (content || '').replace(/&/g, '&amp;')
-							.replace(/</g, '&lt;')
-							.replace(/>/g, '&gt;')
-							.replace(/\r\n/g, '\n')
-							.replace(/\r/g, '\n');
-	content = content.split('\n');
+	content = (content || '').split('\n');
 	shellContent = shellContent.concat(content);
 	if (shellDebounceTimer !== null) {
 		clearTimeout(shellDebounceTimer);
