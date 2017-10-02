@@ -28,8 +28,11 @@ function initialize() {
 	let cursorPos = 0;
 	let typedText = '';
 	let cliText = [];
+	let cliTextSplit = [];
 	let lineBuffer = [];
-	let cliScreenView = [];
+	let renderQueued = false;
+	let cliTextSplitDirty = true;
+	let cliScrollOffset = 0;
 
 	let texturesToPurge = [];
 
@@ -59,23 +62,22 @@ function initialize() {
 		for (let i = 0; i < str.length; i += charsPerLine) {
 			res.push([str.substr(i, charsPerLine), null]);
 		}
-		return res.reverse();
+		return res;
+	}
+
+	function recomputeView() {
+		cliTextSplitDirty = true;
 	}
 
 	function recomputeLines() {
 		let newCliScreenView = [];
-		for (let i = cliText.length - 1; i >= 0; i--) {
-			const data = wrapText(content[i]);
+		for (let i = 0; i < cliText.length; i++) {
+			const data = wrapText(cliText[i]);
 			newCliScreenView = newCliScreenView.concat(data);
-			if (newCliScreenView.length >= lineCount) {
-				break;
-			}
 		}
-		purgeTextures(cliScreenView);
-		cliScreenView = newCliScreenView.reverse();
-		if (cliScreenView.length > lineCount) {
-			purgeTextures(cliScreenView.splice(0, cliScreenView.length - lineCount));
-		}
+		purgeTextures(cliTextSplit);
+		cliTextSplit = newCliScreenView;
+		recomputeView();
 	}
 
 	// TODO: DYNAMIC
@@ -86,7 +88,7 @@ function initialize() {
 		sTmpCanvas.height = lineHeight;
 		gl.uniform2f(uResolution, sCanvas.width, sCanvas.height);
 		gl.viewport(0, 0, sCanvas.width, sCanvas.height);
-		lineCount = Math.floor(height / totalLineHeight) - 1; // Reserve 1 line for prompt
+		lineCount = Math.floor(height / totalLineHeight) - 2; // Reserve 2 line for prompt
 		charsPerLine = Math.floor(width / charWidth);
 		recomputeLines();
 		worker.postMessage(['resize', charsPerLine, lineCount]);
@@ -120,17 +122,13 @@ function initialize() {
         0);
 	gl.enableVertexAttribArray(aPosition);
 
-	function renderTextToTexture(text, cb) {
+	function renderTextToTexture(text) {
 		sTmpCanvasCtx.fillStyle = '#000000';
 		sTmpCanvasCtx.fillRect(0, 0, sTmpCanvas.width, sTmpCanvas.height);
 		sTmpCanvasCtx.font = '16px white_rabbitregular';
 		sTmpCanvasCtx.fillStyle = '#00FF00';
 		sTmpCanvasCtx.textBaseline = 'top';
 		sTmpCanvasCtx.fillText(text, 0, 0);
-		if (cb) cb(sTmpCanvasCtx);
-		//for (let i = 0; i < 20; i++) {
-		//	sTmpCanvasCtx.fillRect(charWidth * i, 0, 1, 10);
-		//}
 		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, sTmpCanvas);
 	}
 
@@ -144,9 +142,9 @@ function initialize() {
 	function drawCursor() {
 		gl.activeTexture(gl.TEXTURE2);
 	
-		let y = totalLineHeight * cliScreenView.length;
+		let y = totalLineHeight * Math.min(cliTextSplit.length, lineCount) + totalLineHeight;
 		let x = charWidth * (cursorPos + 2 + user.length) + 1;
-		let height = lineHeight;
+		let height = lineHeight / 2;
 		let width = charWidth;
 
 		let phase = Math.floor(Date.now() / 250);
@@ -171,21 +169,13 @@ function initialize() {
 		if (!canInput) {
 			gl.uniform4f(uFixedColor, cPhaseInv, cPhase, 0, 1.0);
 
-			height /= 2;
 			width /= 2
-			switch (phase % 4) {
+			switch (phase % 2) {
 				case 0:
 					break;
 				case 1:
 					x += width;
 					break;
-				case 2:
-					x += width;
-					y += height;
-					break;
-				case 3:
-					y += height;
-					break
 			}
 			gl.bufferData(gl.ARRAY_BUFFER,
 				new Float32Array([
@@ -202,9 +192,12 @@ function initialize() {
 	}
 
 	function render() {
+		renderQueued = false;
+
 		for (let i = 0; i < texturesToPurge.length; i++) {
 			gl.deleteTexture(texturesToPurge[i]);
 		}
+		texturesToPurge = [];
 
 		const width = gl.canvas.width;
 
@@ -212,11 +205,32 @@ function initialize() {
 
 		gl.activeTexture(gl.TEXTURE0);
 		gl.uniform1i(uTexture, 0);
-		texturesToPurge = [];
+
+		const renderLineStart = cliTextSplit.length - (cliScrollOffset + lineCount);
+		const renderLineEnd = renderLineStart + lineCount;
+
+		if (cliTextSplitDirty) {
+			for (let i = 0; i < renderLineStart; i++) {
+				const t = cliTextSplit[i][1];
+				if (t) {
+					cliTextSplit[i][1] = null;
+					gl.deleteTexture(t);
+				}
+			}
+
+			for (let i = renderLineEnd; i < cliTextSplit.length; i++) {
+				const t = cliTextSplit[i][1];
+				if (t) {
+					cliTextSplit[i][1] = null;
+					gl.deleteTexture(t);
+				}
+			}
+			cliTextSplitDirty = false;
+		}
 
 		let prevY = 0;
-		for (let i = 0; i < cliScreenView.length; i++) {
-			const currentView = cliScreenView[i];
+		for (let i = renderLineStart; i < renderLineEnd; i++) {
+			const currentView = cliTextSplit[i];
 			if (!currentView[1]) {
 				currentView[1] = gl.createTexture();
 				gl.bindTexture(gl.TEXTURE_2D, currentView[1]);
@@ -228,7 +242,7 @@ function initialize() {
 				gl.bindTexture(gl.TEXTURE_2D, currentView[1]);
 			}
 
-			let y = totalLineHeight * (i + 1);
+			let y = totalLineHeight + prevY;
 			gl.bufferData(gl.ARRAY_BUFFER,
                 new Float32Array([
 					0, y - lineHeight,
@@ -240,8 +254,6 @@ function initialize() {
 			gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 			prevY = y;
 		}
-
-		drawCursor();
 		
 		gl.activeTexture(gl.TEXTURE1);
 		gl.uniform1i(uTexture, 1);
@@ -257,44 +269,42 @@ function initialize() {
 			gl.STATIC_DRAW);
 		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
+		drawCursor();
+	}
+
+	function queueRender() {
+		if (renderQueued) {
+			return;
+		}
+		renderQueued = true;
 		requestAnimationFrame(render);
 	}
 
-	render();
-
-	function queueRender() {
-
-	}
+	setInterval(queueRender, 250);
 
 	function addContent(content) {
 		if (typeof content === 'string') {
 			content = [content];
 		}
 		cliText = cliText.concat(content);
-		let addScreenView = [];
 		for (let i = content.length - 1; i >= 0; i--) {
 			const data = wrapText(content[i]);
-			addScreenView = addScreenView.concat(data);
-			if (addScreenView.length >= lineCount) {
-				break;
-			}
+			cliTextSplit = cliTextSplit.concat(data);
 		}
-		addScreenView = addScreenView.reverse();
-		if (addScreenView.length < lineCount) {
-			cliScreenView = cliScreenView.concat(addScreenView);
-		} else {
-			purgeTextures(cliScreenView);
-			cliScreenView = addScreenView;
-		}
-		if (cliScreenView.length > lineCount) {
-			purgeTextures(cliScreenView.splice(0, cliScreenView.length - lineCount));
-		}
+		recomputeView();
 		queueRender();
+	}
+
+	for (let i = 0; i < 100; i++) {
+		addContent([`LINE ${i}`,'b']);
 	}
 
 	function clearContent() {
 		cliText = [];
-		cliScreenView = [];
+		purgeTextures(cliTextSplit);
+		cliTextSplit = [];
+		cliTextSplitDirty = true;
+		cliScrollOffset = 0;
 		queueRender();
 	}
 
@@ -325,7 +335,33 @@ function initialize() {
 		}
 	};
 
-	document.onkeydown = e => {
+
+
+	function onmousewheel(e) {
+		if (e.deltaY < 0) {
+			if (cliScrollOffset < cliTextSplit.length - lineCount) {
+				cliScrollOffset++;
+			} else {
+				return;
+			}
+		} else if (e.deltaY > 0) {
+			if (cliScrollOffset > 0) {
+				cliScrollOffset--;
+			} else {
+				return;
+			}
+		} else {
+			return;
+		}
+		e.preventDefault();
+		queueRender();
+	}
+
+	document.addEventListener('DOMMouseScroll',onmousewheel);
+	document.addEventListener('mousewheel', onmousewheel);
+	document.addEventListener('wheel', onmousewheel);
+
+	document.addEventListener('keydown', e => {
 		switch (e.key) {
 			case 'Enter':
 				if (!canInput) {
@@ -401,6 +437,16 @@ function initialize() {
 				}
 				typedText = commandHistory[commandHistoryPos];
 				break;
+			case 'PageUp':
+				if (cliScrollOffset < cliTextSplit.length - lineCount) {
+					cliScrollOffset++;
+				}
+				break;
+			case 'PageDown':
+				if (cliScrollOffset > 0) {
+					cliScrollOffset--;
+				}
+				break;
 			case 'Delete':
 				typedText = typedText.substr(0, cursorPos) + typedText.substr(cursorPos + 1);
 				break;
@@ -413,11 +459,14 @@ function initialize() {
 				if (e.key && e.key.length === 1) {
 					typedText = typedText.substr(0, cursorPos) + e.key + typedText.substr(cursorPos);
 					cursorPos++;
+				} else {
+					return;
 				}
 				break;
 		}
+		e.preventDefault();
 		queueRender();
-	};
+	});
 
 	resize(1024, 768);
 }
