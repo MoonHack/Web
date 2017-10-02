@@ -20,6 +20,18 @@
 		
 			// convert from 0->2 to -1->+1 (clipspace)
 			vec2 clipSpace = zeroToTwo - 1.0;
+
+			if (clipSpace.x > 1.0) {
+				clipSpace.x = 1.0;
+			} else if(clipSpace.x < -1.0){
+				clipSpace.x = -1.0;
+			}
+
+			if (clipSpace.y > 1.0) {
+				clipSpace.y = 1.0;
+			} else if(clipSpace.y < -1.0){
+				clipSpace.y = -1.0;
+			}
 		
 			gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
 			v_tex_position = a_tex_position;

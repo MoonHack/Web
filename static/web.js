@@ -14,6 +14,7 @@ function initialize() {
 
 	const dpiScalingFactor = 1;
 
+	const cursorHeight = 4 * dpiScalingFactor;
 	const lineHeight = 16 * dpiScalingFactor;
 	const lineSpacing = 0 * dpiScalingFactor;
 	const charWidth = 9 * dpiScalingFactor;
@@ -25,13 +26,16 @@ function initialize() {
 	let commandHistoryPos = 0;
 	let commandHistory = [];
 
+	let cursorBlinkOn = true;
 	let cursorPos = 0;
 	let typedText = '';
 	let cliText = [];
 	let cliTextSplit = [];
 	let lineBuffer = [];
+	let lineArrayBuffers = [];
 	let renderQueued = false;
 	let cliTextSplitDirty = true;
+	let needsResize = false;
 	let cliScrollOffset = 0;
 
 	let texturesToPurge = [];
@@ -44,6 +48,25 @@ function initialize() {
 	const uTexture = gl.getUniformLocation(program, 'u_texture');
 	const uFixedColor = gl.getUniformLocation(program, 'u_fixedcolor');
 	gl.clearColor(0.0, 0.0, 0.0, 1.0);
+
+	const posBuffer = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
+	gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
+	gl.enableVertexAttribArray(aPosition);
+
+	function cursorBlink() {
+		cursorBlinkOn = !cursorBlinkOn;
+		queueRender();
+	}
+	let cursorBlinkInterval = setInterval(cursorBlink, 1000);
+	function cursorForceOn() {
+		clearInterval(cursorBlinkInterval);
+		cursorBlinkInterval = setInterval(cursorBlink, 1000);
+		if (!cursorBlinkOn) {
+			cursorBlinkOn = true;
+			queueRender();
+		}
+	}
 
 	function purgeTextures(arr) {
 		for(let i = 0; i < arr.length; i++) {
@@ -67,6 +90,7 @@ function initialize() {
 
 	function recomputeView() {
 		cliTextSplitDirty = true;
+		cursorForceOn();
 	}
 
 	function recomputeLines() {
@@ -80,16 +104,44 @@ function initialize() {
 		recomputeView();
 	}
 
-	// TODO: DYNAMIC
-	function resize(width, height) {
+	function resize() {
+		const width = document.body.clientWidth - 9*2;
+		const height = document.body.clientHeight - (9 + 36);
+
 		sCanvas.width = width;
 		sCanvas.height = height;
 		sTmpCanvas.width = width;
 		sTmpCanvas.height = lineHeight;
 		gl.uniform2f(uResolution, sCanvas.width, sCanvas.height);
 		gl.viewport(0, 0, sCanvas.width, sCanvas.height);
-		lineCount = Math.floor(height / totalLineHeight) - 2; // Reserve 2 line for prompt
+
+		lineCount = (height / totalLineHeight) - 1; // Reserve 2 line for prompt
+		if (lineCount % 1 < 0.5) {
+			lineCount--;
+		}
+		lineCount = Math.floor(lineCount);
 		charsPerLine = Math.floor(width / charWidth);
+
+		const bData = [];
+		let y = 0;
+		for(let i = 0; i < lineCount + 1; i++) {
+			bData.push(
+				0, y,
+				width, y,
+				0, y  + totalLineHeight,
+				width, y + totalLineHeight
+			);
+			y += totalLineHeight;
+		}
+		bData.push(
+			0, y,
+			width, y,
+			0, y  + (lineHeight/2),
+			width, y + (lineHeight/2)
+		);
+		gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
+		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(bData), gl.STATIC_DRAW);
+
 		recomputeLines();
 		worker.postMessage(['resize', charsPerLine, lineCount]);
 	}
@@ -111,24 +163,14 @@ function initialize() {
 		0);
 	gl.enableVertexAttribArray(aTexPosition);
 
-	const posBuffer = gl.createBuffer();
-	gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
-	gl.vertexAttribPointer(
-        aPosition,
-        2,
-        gl.FLOAT,
-        false,
-        0,
-        0);
-	gl.enableVertexAttribArray(aPosition);
-
-	function renderTextToTexture(text) {
+	function renderTextToTexture(text, cb) {
 		sTmpCanvasCtx.fillStyle = '#000000';
 		sTmpCanvasCtx.fillRect(0, 0, sTmpCanvas.width, sTmpCanvas.height);
 		sTmpCanvasCtx.font = '16px white_rabbitregular';
 		sTmpCanvasCtx.fillStyle = '#00FF00';
 		sTmpCanvasCtx.textBaseline = 'top';
 		sTmpCanvasCtx.fillText(text, 0, 0);
+		if (cb) cb(sTmpCanvasCtx);
 		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, sTmpCanvas);
 	}
 
@@ -139,60 +181,12 @@ function initialize() {
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 
-	function drawCursor() {
-		gl.activeTexture(gl.TEXTURE2);
-	
-		let y = totalLineHeight * Math.min(cliTextSplit.length, lineCount) + totalLineHeight;
-		let x = charWidth * (cursorPos + 2 + user.length) + 1;
-		let height = lineHeight / 2;
-		let width = charWidth;
-
-		let phase = Math.floor(Date.now() / 250);
-		let cPhase = phase % 16 > 7 ? 0 : 1;
-		let cPhaseInv = cPhase ? 0 : 1;
-
-		if (!canInput) {
-			gl.uniform4f(uFixedColor, cPhase, cPhaseInv, 0, 1.0);
-		} else {
-			gl.uniform4f(uFixedColor, 0, cPhaseInv, 0, 1.0);
-		}
-		gl.bufferData(gl.ARRAY_BUFFER,
-			new Float32Array([
-				x, y,
-				x + width, y,
-				x, y + height,
-				x + width, y + height
-			]),
-			gl.STATIC_DRAW);
-		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-
-		if (!canInput) {
-			gl.uniform4f(uFixedColor, cPhaseInv, cPhase, 0, 1.0);
-
-			width /= 2
-			switch (phase % 2) {
-				case 0:
-					break;
-				case 1:
-					x += width;
-					break;
-			}
-			gl.bufferData(gl.ARRAY_BUFFER,
-				new Float32Array([
-					x, y,
-					x + width, y,
-					x, y + height,
-					x + width, y + height
-				]),
-				gl.STATIC_DRAW);
-			gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-		}
-
-		gl.uniform4f(uFixedColor, 0.0, 0.0, 0.0, 0.0);
-	}
-
 	function render() {
 		renderQueued = false;
+		if (needsResize) {
+			resize();
+			needsResize = false;
+		}
 
 		for (let i = 0; i < texturesToPurge.length; i++) {
 			gl.deleteTexture(texturesToPurge[i]);
@@ -206,8 +200,8 @@ function initialize() {
 		gl.activeTexture(gl.TEXTURE0);
 		gl.uniform1i(uTexture, 0);
 
-		const renderLineStart = cliTextSplit.length - (cliScrollOffset + lineCount);
-		const renderLineEnd = renderLineStart + lineCount;
+		const renderLineStart = Math.max(0, cliTextSplit.length - (cliScrollOffset + lineCount));
+		const renderLineEnd = Math.min(renderLineStart + lineCount, cliTextSplit.length);
 
 		if (cliTextSplitDirty) {
 			for (let i = 0; i < renderLineStart; i++) {
@@ -228,7 +222,7 @@ function initialize() {
 			cliTextSplitDirty = false;
 		}
 
-		let prevY = 0;
+		let y = 0;
 		for (let i = renderLineStart; i < renderLineEnd; i++) {
 			const currentView = cliTextSplit[i];
 			if (!currentView[1]) {
@@ -242,34 +236,22 @@ function initialize() {
 				gl.bindTexture(gl.TEXTURE_2D, currentView[1]);
 			}
 
-			let y = totalLineHeight + prevY;
-			gl.bufferData(gl.ARRAY_BUFFER,
-                new Float32Array([
-					0, y - lineHeight,
-					width, y - lineHeight,
-					0, y,
-					width, y
-				]),
-                gl.STATIC_DRAW);
+			gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 2*4*4 * y);
 			gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-			prevY = y;
+			gl.finish();
+			y++;
 		}
 		
 		gl.activeTexture(gl.TEXTURE1);
 		gl.uniform1i(uTexture, 1);
-		renderTextToTexture(`${user}$ ${typedText}`);
-		prevY += lineSpacing;
-		gl.bufferData(gl.ARRAY_BUFFER,
-			new Float32Array([
-				0, prevY,
-				width, prevY,
-				0, prevY + lineHeight,
-				width, prevY + lineHeight
-			]),
-			gl.STATIC_DRAW);
+		renderTextToTexture(`${user}$ ${typedText}`, (ctx) => {
+			if (cursorBlinkOn) {
+				ctx.fillRect(charWidth * (cursorPos + user.length + 2), totalLineHeight - cursorHeight, charWidth, cursorHeight);
+			}
+		});
+		gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 2*4*4 * y);
 		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-
-		drawCursor();
+		gl.finish();
 	}
 
 	function queueRender() {
@@ -279,8 +261,6 @@ function initialize() {
 		renderQueued = true;
 		requestAnimationFrame(render);
 	}
-
-	setInterval(queueRender, 250);
 
 	function addContent(content) {
 		if (typeof content === 'string') {
@@ -334,8 +314,6 @@ function initialize() {
 				break;
 		}
 	};
-
-
 
 	function onmousewheel(e) {
 		if (e.deltaY < 0) {
@@ -428,6 +406,7 @@ function initialize() {
 					--commandHistoryPos;
 				}
 				typedText = commandHistory[commandHistoryPos];
+				cursorPos = typedText.length;
 				break;
 			case 'ArrowDown':
 				if (commandHistoryPos < commandHistory.length - 1) {
@@ -436,6 +415,7 @@ function initialize() {
 					commandHistoryPos = commandHistory.length - 1;
 				}
 				typedText = commandHistory[commandHistoryPos];
+				cursorPos = typedText.length;
 				break;
 			case 'PageUp':
 				if (cliScrollOffset < cliTextSplit.length - lineCount) {
@@ -465,8 +445,13 @@ function initialize() {
 				break;
 		}
 		e.preventDefault();
+		cursorForceOn();
 		queueRender();
 	});
 
-	resize(1024, 768);
+	needsResize = true;
+	window.onresize = () => {
+		needsResize = true;
+		queueRender();
+	};
 }

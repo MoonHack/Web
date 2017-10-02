@@ -424,4 +424,4 @@ function addContent(content) {
 	shellDebounceTimer = setTimeout(postShell, 10);
 }
 
-postMessage(['init' ]);
+postMessage(['init']);
