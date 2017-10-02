@@ -295,11 +295,21 @@ function initialize() {
 		gl.uniform1i(uTexture, 1);
 		if (r_lastTypedText !== typedText || r_lastUser !== user || r_lastCursorBlinkOn !== cursorBlinkOn || r_lastCanInput != canInput) {
 			let _r_txt = '$ ';
-			const _r_cursorPos = cursorPos + 2 + user.length;
+			let _r_cursorPos = cursorPos + 2 + user.length;
+			let _r_activeLine = null;
 			if (!canInput) {
-				_r_txt = '% ';
+				if (typedText === '') {
+					_r_activeLine = [];
+					_r_cursorPos = 0;
+				} else {
+					_r_txt = '% ';
+				}
 			}
-			renderTextToTexture([[user], [_r_txt], [typedText]], (ctx) => {
+			if (!_r_activeLine) {
+				_r_activeLine = [[user], [_r_txt], [typedText]];
+			}
+
+			renderTextToTexture(_r_activeLine, (ctx) => {
 				if (cursorBlinkOn) {
 					ctx.fillRect(charWidth * _r_cursorPos, totalLineHeight - cursorHeight, charWidth, cursorHeight);
 				}
