@@ -30,9 +30,14 @@
 		varying highp vec2 v_tex_position;
 
 		uniform sampler2D u_texture;
+		uniform highp vec4 u_fixedcolor;
 
 		void main() {
-			gl_FragColor = texture2D(u_texture, v_tex_position);
+			if (u_fixedcolor.w > 0.0) {
+				gl_FragColor = u_fixedcolor;
+			} else {
+				gl_FragColor = texture2D(u_texture, v_tex_position);
+			}
 		}
 		</script>
 		<title>MHWeb</title>
