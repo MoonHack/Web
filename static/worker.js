@@ -251,7 +251,7 @@ function connectWs(_ws) {
 	ws.onopen = () => {
 		wsQueue.forEach(obj => ws.send(JSON.stringify(obj)));
 		wsQueue = [];
-	}
+	};
 
 	ws.onerror = e => {
 		setCanRunCommand(false);
