@@ -181,7 +181,7 @@ function initialize() {
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 
-	let r_lastTypedText, r_lastUser, r_lastCursorBlinkOn;
+	let r_lastTypedText, r_lastUser, r_lastCursorBlinkOn, r_lastCanInput;
 
 	function render() {
 		renderQueued = false;
@@ -246,10 +246,15 @@ function initialize() {
 		
 		gl.activeTexture(gl.TEXTURE1);
 		gl.uniform1i(uTexture, 1);
-		if (r_lastTypedText !== typedText || r_lastUser !== user || r_lastCursorBlinkOn !== cursorBlinkOn) {
-			renderTextToTexture(`${user}$ ${typedText}`, (ctx) => {
+		if (r_lastTypedText !== typedText || r_lastUser !== user || r_lastCursorBlinkOn !== cursorBlinkOn || r_lastCanInput != canInput) {
+			let _r_txt = '$';
+			const _r_cursorPos = cursorPos + 2 + user.length;
+			if (!canInput) {
+				_r_txt = '%';
+			}
+			renderTextToTexture(`${user}${_r_txt} ${typedText}`, (ctx) => {
 				if (cursorBlinkOn) {
-					ctx.fillRect(charWidth * (cursorPos + user.length + 2), totalLineHeight - cursorHeight, charWidth, cursorHeight);
+					ctx.fillRect(charWidth * _r_cursorPos, totalLineHeight - cursorHeight, charWidth, cursorHeight);
 				}
 			});
 			r_lastTypedText = typedText;
