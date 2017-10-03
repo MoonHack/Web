@@ -393,7 +393,7 @@ function postShell() {
 function addContentParsed(d) {
 	if (d instanceof Array) {
 		if (d.length === 2 && (d[0] === true || d[0] === false)) {
-			addContentFormatted(d[0] ? 'Success': 'Failure');
+			addContentFormatted(d[0] ? '<c=#00FF00>Success</>': '<c=#FF0000>Failure</>');
 			addContentFormatted(d[1]);
 			return;
 		} else if (d.length === 1) {
@@ -413,11 +413,15 @@ function addContentParsed(d) {
 	addContentFormatted(d);
 }
 
+function escapeFormattingCodes(str) {
+	return str.replace(/</g, 'È').replace(/>/g, 'É');
+}
+
 function addContentFormatted(d) {
 	if (typeof d === 'string') {
 		addContent(d);
 	} else {
-		addContent(JSON.stringify(d, null, '\t'));
+		addContent(escapeFormattingCodes(JSON.stringify(d, null, '\t')));
 	}
 }
 
