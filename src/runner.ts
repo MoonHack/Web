@@ -13,31 +13,36 @@ const workQueue = connection.declareQueue('moonhack_command_jobs', {
 function encodeToMSG(run_id: string,
 					caller: string,
 					script: string,
-					args: string): Amqp.Message {
+					args: string,
+					info: string): Amqp.Message {
 	const run_id_b = Buffer.from(run_id, 'utf8');
 	const caller_b = Buffer.from(caller, 'utf8');
 	const script_b = Buffer.from(script, 'utf8');
 	const args_b = Buffer.from(args, 'utf8');
-	const struct_info_b = Buffer.allocUnsafe(4 * 4);
+	const info_b = Buffer.from(info, 'utf8');
+	const struct_info_b = Buffer.allocUnsafe(5 * 4);
 	struct_info_b.writeUInt32LE(run_id_b.byteLength, 0);
 	struct_info_b.writeUInt32LE(caller_b.byteLength, 4);
 	struct_info_b.writeUInt32LE(script_b.byteLength, 8);
 	struct_info_b.writeUInt32LE(args_b.byteLength, 12);
+	struct_info_b.writeUInt32LE(info_b.byteLength, 16);
 	return new Amqp.Message(Buffer.concat([
 		struct_info_b,
 		run_id_b,
 		caller_b,
 		script_b,
 		args_b,
+		info_b,
 	]));
 }
 
 export function run(caller: string,
 					script: string,
 					args: string,
+					info: string,
 					out: Writable): Bluebird<void> {
 	const run_id = uuidv4();
-	const msg = encodeToMSG(run_id, caller, script, args);
+	const msg = encodeToMSG(run_id, caller, script, args, info);
 	const replyQueue = connection.declareQueue(`moonhack_command_results_${run_id}`, {
 		autoDelete: true,
 		arguments: {

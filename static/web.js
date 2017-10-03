@@ -397,7 +397,7 @@ function initialize() {
 		content = content.map(parseText);
 
 		cliText = cliText.concat(content);
-		for (let i = content.length - 1; i >= 0; i--) {
+		for (let i = 0; i < content.length; i++) {
 			const data = wrapText(content[i]);
 			cliTextSplit = cliTextSplit.concat(data);
 		}

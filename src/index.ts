@@ -197,6 +197,13 @@ app.post('/api/v1/run',
 			}
 		}
 
+		const infoStr = JSON.stringify({
+			terminal: {
+				width: req.body.width,
+				height: req.body.height,
+			},
+		});
+
 		return canAccountUseUser(req, username)
 		.then(allowed => {
 			if (!allowed) {
@@ -204,7 +211,7 @@ app.post('/api/v1/run',
 				res.end();
 				return;
 			}
-			return run(username, script, argsStr, res);
+			return run(username, script, argsStr, infoStr, res);
 		});
 	}));
 
