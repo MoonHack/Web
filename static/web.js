@@ -50,7 +50,7 @@ function initialize() {
 		gl.compileShader(shader);
 
 		if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-			var info = gl.getShaderInfoLog( shader );
+			const info = gl.getShaderInfoLog(shader);
 			throw 'Could not compile WebGL program. \n\n' + info;
 		}
 		
