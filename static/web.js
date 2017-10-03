@@ -318,13 +318,9 @@ function initialize() {
 			}
 
 			let _r_activeLine = null;
-			if (!canInput) {
-				if (_r_typeText === '') {
-					_r_activeLine = [];
-					_r_cursorPos = 0;
-				} else {
-					_r_txt = '% ';
-				}
+			if (!canInput && _r_typeText === '') {
+				_r_activeLine = [];
+				_r_cursorPos = 0;
 			}
 			if (!_r_activeLine) {
 				_r_activeLine = [[user], [_r_txt], [_r_typeText]];
