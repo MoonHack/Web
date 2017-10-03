@@ -41,7 +41,64 @@ function initialize() {
 
 	let texturesToPurge = [];
 
-	const program = webglUtils.createProgramFromScripts(gl, ['2d-vertex-shader','2d-fragment-shader']);
+	const program = gl.createProgram();
+	// Attach pre-existing shaders
+	function createShader(type, sourceCode) {
+		// Compiles either a shader of type gl.VERTEX_SHADER or gl.FRAGMENT_SHADER
+		var shader = gl.createShader(type);
+		gl.shaderSource(shader, sourceCode);
+		gl.compileShader(shader);
+
+		if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+			var info = gl.getShaderInfoLog( shader );
+			throw 'Could not compile WebGL program. \n\n' + info;
+		}
+		
+		gl.attachShader(program, shader);
+	}
+	createShader(gl.VERTEX_SHADER, `
+	uniform vec2 u_resolution;
+	attribute vec2 a_position;
+	attribute vec2 a_tex_position;
+
+	varying highp vec2 v_tex_position;
+	
+	void main() {
+		// convert the rectangle from pixels to 0.0 to 1.0
+		vec2 zeroToOne = a_position / u_resolution;
+	
+		// convert from 0->1 to 0->2
+		vec2 zeroToTwo = zeroToOne * 2.0;
+	
+		// convert from 0->2 to -1->+1 (clipspace)
+		vec2 clipSpace = zeroToTwo - 1.0;
+	
+		gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
+		v_tex_position = a_tex_position;
+	}
+	`);
+	createShader(gl.FRAGMENT_SHADER, `
+	varying highp vec2 v_tex_position;
+	
+	uniform sampler2D u_texture;
+	uniform highp vec4 u_fixedcolor;
+
+	void main() {
+		if (u_fixedcolor.w > 0.0) {
+			gl_FragColor = u_fixedcolor;
+		} else {
+			gl_FragColor = texture2D(u_texture, v_tex_position);
+		}
+	}
+	`);
+
+	gl.linkProgram(program);
+
+	if (!gl.getProgramParameter( program, gl.LINK_STATUS)) {
+		const info = gl.getProgramInfoLog(program);
+		throw 'Could not compile WebGL program. \n\n' + info;
+	}
+
 	gl.useProgram(program);
 	const aPosition = gl.getAttribLocation(program, 'a_position');
 	const aTexPosition = gl.getAttribLocation(program, 'a_tex_position');
@@ -364,7 +421,7 @@ function initialize() {
 				_r_cursorPos = 0;
 			}
 			if (!_r_activeLine) {
-				_r_activeLine = [[user], [_r_txt], [_r_typeText]];
+				_r_activeLine = [[user,{c:'#AAAAAA'}], [_r_txt,{c:'#FFFFFF'}], [_r_typeText,{c:'#AAAAAA'}]];
 			}
 
 			renderTextToTexture(_r_activeLine, (ctx) => {
