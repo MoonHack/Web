@@ -201,12 +201,12 @@ function initialize() {
 		gl.uniform2f(uResolution, sCanvas.width, sCanvas.height);
 		gl.viewport(0, 0, sCanvas.width, sCanvas.height);
 
-		let _lineCount = (height / totalLineHeight) - 1; // Reserve 2 line for prompt
+		/*let _lineCount = (height / totalLineHeight) - 1; // Reserve 2 line for prompt
 		if (_lineCount % 1 < 0.5) {
 			_lineCount--;
-		}
-		_lineCount = Math.floor(_lineCount);
-		let _charsPerLine = Math.floor(width / charWidth);
+		}*/
+		const _lineCount = Math.floor((height / totalLineHeight) - 1);
+		const _charsPerLine = Math.floor(width / charWidth);
 
 		if (_lineCount !== lineCount || _charsPerLine !== charsPerLine) {
 			const _relativeWidth = _charsPerLine * charWidth;
@@ -214,17 +214,17 @@ function initialize() {
 
 			const bData = [];
 			let y = 0;
-			for(let i = 0; i < lineCount + 1; i++) {
+			for(let i = 0; i < lineCount + 2; i++) {
 				bData.push(
 					0, y,
 					_relativeWidth, y
 				);
 				y += totalLineHeight;
 			}
-			bData.push(
+			/*bData.push(
 				0, y  + (lineHeight/2),
 				_relativeWidth, y + (lineHeight/2)
-			);
+			);*/
 			gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
 			gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(bData), gl.STATIC_DRAW);
 		}
@@ -627,6 +627,12 @@ function initialize() {
 						clearContent();
 						canInput = true;
 						break;
+					case '$test':
+						for (let i = 0; i < 100; i++) {
+							addContent(`<#FF0000>TESTLINE</> ${i}`.repeat(20));
+						}
+						canInput = true;
+						break;
 					default:
 						worker.postMessage(['command',cmd,args]);
 						break;
@@ -656,8 +662,4 @@ function initialize() {
 		needsResize = true;
 		queueRender();
 	};
-
-	for (let i = 0; i < 100; i++) {
-		addContent(`<#FF0000>TESTLINE</> ${i}`.repeat(20));
-	}
 }
