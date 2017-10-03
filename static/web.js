@@ -190,6 +190,10 @@ function initialize() {
 		const width = document.body.clientWidth - 9*2;
 		const height = document.body.clientHeight - (9 + 36);
 
+		if (width === sCanvas.width && height === sCanvas.height) {
+			return;
+		}
+
 		sCanvas.width = width;
 		sCanvas.height = height;
 		sTmpCanvas.width = width;
@@ -197,34 +201,42 @@ function initialize() {
 		gl.uniform2f(uResolution, sCanvas.width, sCanvas.height);
 		gl.viewport(0, 0, sCanvas.width, sCanvas.height);
 
-		lineCount = (height / totalLineHeight) - 1; // Reserve 2 line for prompt
-		if (lineCount % 1 < 0.5) {
-			lineCount--;
+		let _lineCount = (height / totalLineHeight) - 1; // Reserve 2 line for prompt
+		if (_lineCount % 1 < 0.5) {
+			_lineCount--;
 		}
-		lineCount = Math.floor(lineCount);
-		charsPerLine = Math.floor(width / charWidth);
+		_lineCount = Math.floor(_lineCount);
+		let _charsPerLine = Math.floor(width / charWidth);
 
-		const bData = [];
-		let y = 0;
-		for(let i = 0; i < lineCount + 1; i++) {
+		if (_lineCount !== lineCount || _charsPerLine !== charsPerLine) {
+			const _relativeWidth = _charsPerLine * charWidth;
+			lineCount = _lineCount;
+
+			const bData = [];
+			let y = 0;
+			for(let i = 0; i < lineCount + 1; i++) {
+				bData.push(
+					0, y,
+					_relativeWidth, y,
+					0, y  + totalLineHeight,
+					_relativeWidth, y + totalLineHeight
+				);
+				y += totalLineHeight;
+			}
 			bData.push(
 				0, y,
-				width, y,
-				0, y  + totalLineHeight,
-				width, y + totalLineHeight
+				_relativeWidth, y,
+				0, y  + (lineHeight/2),
+				_relativeWidth, y + (lineHeight/2)
 			);
-			y += totalLineHeight;
+			gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
+			gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(bData), gl.STATIC_DRAW);
 		}
-		bData.push(
-			0, y,
-			width, y,
-			0, y  + (lineHeight/2),
-			width, y + (lineHeight/2)
-		);
-		gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
-		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(bData), gl.STATIC_DRAW);
 
-		recomputeLines();
+		if (_charsPerLine !== charsPerLine) {
+			charsPerLine = _charsPerLine;
+			recomputeLines();
+		}
 		worker.postMessage(['resize', charsPerLine, lineCount]);
 	}
 
@@ -649,7 +661,7 @@ function initialize() {
 		queueRender();
 	};
 
-	//for (let i = 0; i < 100; i++) {
-	//	addContent(`<#FF0000>TESTLINE</> ${i}`.repeat(20));
-	//}
+	for (let i = 0; i < 100; i++) {
+		addContent(`<#FF0000>TESTLINE</> ${i}`.repeat(20));
+	}
 }
