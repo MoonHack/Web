@@ -201,10 +201,6 @@ function initialize() {
 		gl.uniform2f(uResolution, sCanvas.width, sCanvas.height);
 		gl.viewport(0, 0, sCanvas.width, sCanvas.height);
 
-		/*let _lineCount = (height / totalLineHeight) - 1; // Reserve 2 line for prompt
-		if (_lineCount % 1 < 0.5) {
-			_lineCount--;
-		}*/
 		const _lineCount = Math.floor((height / totalLineHeight) - 1);
 		const _charsPerLine = Math.floor(width / charWidth);
 
@@ -212,21 +208,18 @@ function initialize() {
 			const _relativeWidth = _charsPerLine * charWidth;
 			lineCount = _lineCount;
 
-			const bData = [];
+			const bData = new Float32Array(4 * (lineCount + 2));
 			let y = 0;
+			let o = 0;
 			for(let i = 0; i < lineCount + 2; i++) {
-				bData.push(
-					0, y,
-					_relativeWidth, y
-				);
+				bData[o++] = 0;
+				bData[o++] = y;
+				bData[o++] = _relativeWidth;
+				bData[o++] = y;
 				y += totalLineHeight;
 			}
-			/*bData.push(
-				0, y  + (lineHeight/2),
-				_relativeWidth, y + (lineHeight/2)
-			);*/
 			gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
-			gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(bData), gl.STATIC_DRAW);
+			gl.bufferData(gl.ARRAY_BUFFER, bData, gl.STATIC_DRAW);
 		}
 
 		if (_charsPerLine !== charsPerLine) {
