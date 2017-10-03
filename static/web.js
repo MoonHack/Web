@@ -217,15 +217,11 @@ function initialize() {
 			for(let i = 0; i < lineCount + 1; i++) {
 				bData.push(
 					0, y,
-					_relativeWidth, y,
-					0, y  + totalLineHeight,
-					_relativeWidth, y + totalLineHeight
+					_relativeWidth, y
 				);
 				y += totalLineHeight;
 			}
 			bData.push(
-				0, y,
-				_relativeWidth, y,
 				0, y  + (lineHeight/2),
 				_relativeWidth, y + (lineHeight/2)
 			);
@@ -344,7 +340,7 @@ function initialize() {
 				gl.bindTexture(gl.TEXTURE_2D, currentView[1]);
 			}
 
-			gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 2*4*4 * y);
+			gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 4*4 * y);
 			gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 			y++;
 		}
@@ -390,7 +386,7 @@ function initialize() {
 			r_lastUser = user;
 			r_lastCursorBlinkOn = cursorBlinkOn;
 		}
-		gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 2*4*4 * y);
+		gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 4*4 * y);
 		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 	}
 
