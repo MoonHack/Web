@@ -333,7 +333,7 @@ function initialize() {
 				gl.bindTexture(gl.TEXTURE_2D, currentView[1]);
 			}
 
-			gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 4*4 * y);
+			gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, y << 4);
 			gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 			y++;
 		}
@@ -379,7 +379,7 @@ function initialize() {
 			r_lastUser = user;
 			r_lastCursorBlinkOn = cursorBlinkOn;
 		}
-		gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 4*4 * y);
+		gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, y << 4);
 		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 	}
 
