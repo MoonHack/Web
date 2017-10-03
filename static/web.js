@@ -237,13 +237,7 @@ function initialize() {
 		0, 1,
 		1, 1
 	]), gl.STATIC_DRAW);
-	gl.vertexAttribPointer(
-        aTexPosition,
-        2,
-        gl.FLOAT,
-        false,
-        0,
-		0);
+	gl.vertexAttribPointer(aTexPosition, 2, gl.FLOAT, false, 0, 0);
 	gl.enableVertexAttribArray(aTexPosition);
 
 	function renderTextToTexture(text, cb) {
@@ -254,7 +248,7 @@ function initialize() {
 		let x = 0;
 		for (let i = 0; i < text.length; i++) {
 			const t = text[i];
-			if (!t|| !t[0]) {
+			if (!t || !t[0]) {
 				continue;
 			}
 			const f = t[1] || {};
@@ -265,7 +259,9 @@ function initialize() {
 				x += charWidth;
 			}
 		}
-		if (cb) cb(sTmpCanvasCtx);
+		if (cb) {
+			cb(sTmpCanvasCtx);
+		}
 		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, sTmpCanvas);
 	}
 
