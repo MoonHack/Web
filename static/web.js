@@ -298,10 +298,28 @@ function initialize() {
 		gl.uniform1i(uTexture, 1);
 		if (r_lastTypedText !== typedText || r_lastUser !== user || r_lastCursorBlinkOn !== cursorBlinkOn || r_lastCanInput != canInput) {
 			let _r_txt = '$ ';
-			let _r_cursorPos = cursorPos + 2 + user.length;
+			let _r_typeText = typedText;
+			const fixedPromptLen = 2 + user.length;
+			let _r_cursorPos = cursorPos + fixedPromptLen;
+			if (_r_cursorPos >= charsPerLine) {
+				_r_cursorPos = charsPerLine - 1;
+			}
+
+			const charsAllowed = charsPerLine - (fixedPromptLen + 1);
+			if (_r_typeText.length >= charsAllowed) {
+				if (cursorPos < typedText.length) {
+					const cursorOffset = typedText.length - cursorPos;
+					const start = (_r_typeText.length - (charsAllowed + cursorOffset));
+					_r_typeText = _r_typeText.substr(start >= 0 ? start : 0, charsAllowed + 1);
+				} else if (_r_typeText.length > charsAllowed) {
+					_r_typeText = _r_typeText.substr(_r_typeText.length - charsAllowed);
+				}
+				_r_txt = '< ';
+			}
+
 			let _r_activeLine = null;
 			if (!canInput) {
-				if (typedText === '') {
+				if (_r_typeText === '') {
 					_r_activeLine = [];
 					_r_cursorPos = 0;
 				} else {
@@ -309,7 +327,7 @@ function initialize() {
 				}
 			}
 			if (!_r_activeLine) {
-				_r_activeLine = [[user], [_r_txt], [typedText]];
+				_r_activeLine = [[user], [_r_txt], [_r_typeText]];
 			}
 
 			renderTextToTexture(_r_activeLine, (ctx) => {
