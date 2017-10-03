@@ -41,9 +41,8 @@ function initialize() {
 
 	let texturesToPurge = [];
 
-	const program = gl.createProgram();
 	// Attach pre-existing shaders
-	function createShader(type, sourceCode) {
+	function createShader(program, type, sourceCode) {
 		// Compiles either a shader of type gl.VERTEX_SHADER or gl.FRAGMENT_SHADER
 		var shader = gl.createShader(type);
 		gl.shaderSource(shader, sourceCode);
@@ -56,7 +55,22 @@ function initialize() {
 		
 		gl.attachShader(program, shader);
 	}
-	createShader(gl.VERTEX_SHADER, `
+	function createProgram(vertex, fragment) {
+		const program = gl.createProgram();
+		createShader(program, gl.VERTEX_SHADER, vertex);
+		createShader(program, gl.FRAGMENT_SHADER, fragment);
+
+		gl.linkProgram(program);
+	
+		if (!gl.getProgramParameter( program, gl.LINK_STATUS)) {
+			const info = gl.getProgramInfoLog(program);
+			throw 'Could not compile WebGL program. \n\n' + info;
+		}
+
+		return program;
+	}
+
+	const program = createProgram(`
 	uniform vec2 u_resolution;
 	attribute vec2 a_position;
 	attribute vec2 a_tex_position;
@@ -76,8 +90,7 @@ function initialize() {
 		gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
 		v_tex_position = a_tex_position;
 	}
-	`);
-	createShader(gl.FRAGMENT_SHADER, `
+	`, `
 	varying highp vec2 v_tex_position;
 	
 	uniform sampler2D u_texture;
@@ -91,13 +104,6 @@ function initialize() {
 		}
 	}
 	`);
-
-	gl.linkProgram(program);
-
-	if (!gl.getProgramParameter( program, gl.LINK_STATUS)) {
-		const info = gl.getProgramInfoLog(program);
-		throw 'Could not compile WebGL program. \n\n' + info;
-	}
 
 	gl.useProgram(program);
 	const aPosition = gl.getAttribLocation(program, 'a_position');
