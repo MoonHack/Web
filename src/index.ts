@@ -197,10 +197,19 @@ app.post('/api/v1/run',
 			}
 		}
 
+		let w = req.body.width;
+		if (w && typeof w !== 'number') {
+			w = parseInt(w, 10);
+		}
+		let h = req.body.height;
+		if (h && typeof h !== 'number') {
+			h = parseInt(h, 10);
+		}
+
 		const infoStr = JSON.stringify({
 			terminal: {
-				width: req.body.width,
-				height: req.body.height,
+				width: w || undefined,
+				height: h || undefined,
 			},
 		});
 
