@@ -244,6 +244,11 @@ function connectWs(_ws) {
 	};
 
 	ws.onclose = () => {
+		if (_ws !== ws || wsErrored) {
+			return;
+		}
+		addContent('Connection to MoonHack closed');
+		wsErrored = true;
 		setCanRunCommand(false);
 		setTimeout(() => connectWs(_ws), 2000);
 	};
@@ -254,6 +259,9 @@ function connectWs(_ws) {
 	};
 
 	ws.onerror = e => {
+		if (_ws !== ws) {
+			return;
+		}
 		setCanRunCommand(false);
 		addContent('Connection to MoonHack errored: ' + e);
 		wsErrored = true;
