@@ -61,7 +61,7 @@ function initialize() {
 		createShader(program, gl.FRAGMENT_SHADER, fragment);
 
 		gl.linkProgram(program);
-	
+
 		if (!gl.getProgramParameter( program, gl.LINK_STATUS)) {
 			const info = gl.getProgramInfoLog(program);
 			throw 'Could not compile WebGL program. \n\n' + info;
@@ -338,6 +338,13 @@ function initialize() {
 
 	let r_lastTypedText, r_lastUser, r_lastCursorBlinkOn, r_lastCanInput;
 
+	function mkPromptLine(user, sgn, typedText, preformat) {
+		if (preformat) {
+			return [[user,{c:'#AAAAAA'}], [sgn,{c:'#FFFFFF'}], [typedText,{c:'#888888'}]];	
+		}
+		return `<c=#AAAAAA>${user}</><c=#FFFFFF>${sgn}</><c=#888888>${typedText}</>`;
+	}
+
 	function render() {
 		renderQueued = false;
 		if (needsResize) {
@@ -427,7 +434,7 @@ function initialize() {
 				_r_cursorPos = 0;
 			}
 			if (!_r_activeLine) {
-				_r_activeLine = [[user,{c:'#AAAAAA'}], [_r_txt,{c:'#FFFFFF'}], [_r_typeText,{c:'#AAAAAA'}]];
+				_r_activeLine = mkPromptLine(user, _r_txt, _r_typeText, true);
 			}
 
 			renderTextToTexture(_r_activeLine, (ctx) => {
@@ -640,7 +647,7 @@ function initialize() {
 				}
 				const t = typedText.trim();
 				if (t === '') {
-					addContent(`${user}$`);
+					addContent(mkPromptLine(user, '$', ''));
 					needRender = false;
 					break;
 				}
@@ -661,7 +668,7 @@ function initialize() {
 					cmd = t;
 					args = '';
 				}
-				addContent(`${user}$ ${t}`);
+				addContent(mkPromptLine(user, '$ ', t));
 				switch (cmd) {
 					case 'user':
 						if (args !== '') {
