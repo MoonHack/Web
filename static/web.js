@@ -14,6 +14,7 @@ function initialize() {
 
 	const dpiScalingFactor = 1;
 
+	const charFont = `${16 * dpiScalingFactor}px white_rabbitregular`;
 	const cursorHeight = 4 * dpiScalingFactor;
 	const lineHeight = 16 * dpiScalingFactor;
 	const lineSpacing = 0 * dpiScalingFactor;
@@ -243,7 +244,7 @@ function initialize() {
 	function renderTextToTexture(text, cb) {
 		sTmpCanvasCtx.fillStyle = '#101215';
 		sTmpCanvasCtx.fillRect(0, 0, sTmpCanvas.width, sTmpCanvas.height);
-		sTmpCanvasCtx.font = '16px white_rabbitregular';
+		sTmpCanvasCtx.font = charFont;
 		sTmpCanvasCtx.textBaseline = 'top';
 		let x = 0;
 		for (let i = 0; i < text.length; i++) {
