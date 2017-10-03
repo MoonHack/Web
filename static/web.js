@@ -79,13 +79,18 @@ function initialize() {
 		}
 	}
 
-	function wrapText(str) {
+	const formatShortMap = {
+		color: 'c',
+		colour: 'c',
+	};
+
+	function parseText(str) {
 		let formatting = [];
 		let inCC = false;
 		let _cc = '';
 		let _str = '';
-		let _line = [];
-		let _lineLen = 0;
+		let _parts = [];
+		let _partsLen = 0;
 		const _lines = [];
 		for (let i = 0; i < str.length; i++) {
 			const c = str[i];
@@ -95,35 +100,72 @@ function initialize() {
 					if (_cc == '/') {
 						formatting.shift();	
 					} else {
-						formatting.unshift(_cc);
+						const _format = {};
+						_cc.split(',').forEach(attr => {
+							const [k,v] = attr.split('=', 2);
+							if (!v) {
+								_format.c = k;
+								return;
+							}
+							const ks = formatShortMap[k];
+							if (ks) {
+								_format[ks] = v;
+								return;
+							}
+							_format[k] = v;
+						});
+						formatting.unshift(_format);
 					}
 				}
 				_cc += c;
 			} else if (c === '<') {
 				inCC = true;
 				_cc = '';
-				_line.push([_str,formatting[0]]);
-				_lineLen += _str.length;
+				_parts.push([_str,formatting[0]]);
+				_partsLen += _str.length;
 				_str = '';
 			} else {
 				_str += c;
-				if (_str.length >= charsPerLine - _lineLen) {
-					_line.push([_str,formatting[0]]);
-					_lineLen += _str.length;
-					_str = '';
-				}
-			}
-			if (_lineLen >= charsPerLine) {
-				_lines.push([_line, null]);
-				_line = [];
-				_lineLen = 0;
 			}
 		}
+		
 		if (_str.length > 0) {
-			_line.push([_str, formatting[0]]);
+			_parts.push([_str, formatting[0]]);
+			_partsLen += _str.length;
 		}
-		if (_line.length > 0) {
-			_lines.push([_line, null]);
+
+		return [_parts, _partsLen];
+	}
+
+	function wrapText([parts,partsLen]) {
+		const _lines = [];
+		let idx = 0;
+		let offset = 0;
+		for (let i = 0; i < partsLen; i += charsPerLine) {
+			let _str = [];
+			let _left = charsPerLine;
+			while (_left > 0) {
+				const p = parts[idx];
+				if (!p) {
+					break;
+				}
+				const len = p[0].length - offset;
+				if (len > _left) {
+					_str.push([p[0].substr(offset, _left), p[1]]);
+					offset += _left;
+					break;
+				}
+
+				if (offset) {
+					_str.push([p[0].substr(offset), p[1]]);
+				} else {
+					_str.push(p);
+				}
+				offset = 0;
+				idx++;
+				_left -= len;
+			}
+			_lines.push([_str, null]);
 		}
 		return _lines;
 	}
@@ -214,7 +256,8 @@ function initialize() {
 			if (!t|| !t[0]) {
 				continue;
 			}
-			sTmpCanvasCtx.fillStyle = t[1] || '#77AEEE';
+			const f = t[1] || {};
+			sTmpCanvasCtx.fillStyle = f.c || '#77AEEE';
 			const tx = t[0];
 			for (let j = 0; j < tx.length; j++) {
 				sTmpCanvasCtx.fillText(tx[j], x, 0);
@@ -351,6 +394,8 @@ function initialize() {
 		if (typeof content === 'string') {
 			content = [content];
 		}
+		content = content.map(parseText);
+
 		cliText = cliText.concat(content);
 		for (let i = content.length - 1; i >= 0; i--) {
 			const data = wrapText(content[i]);
@@ -603,4 +648,8 @@ function initialize() {
 		needsResize = true;
 		queueRender();
 	};
+
+	//for (let i = 0; i < 100; i++) {
+	//	addContent(`<#FF0000>TESTLINE</> ${i}`.repeat(20));
+	//}
 }
