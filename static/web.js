@@ -2,7 +2,8 @@
 
 function initialize() {
 	const sCanvas = document.getElementById('shellCanvas');
-	const gl = sCanvas.getContext('webgl');
+	const gl2 = sCanvas.getContext('webgl2');
+	const gl = gl2 || sCanvas.getContext('webgl');
 	const sStatus = document.getElementById('statusContainer');
 
 	const sTmpCanvas = document.getElementById('textTempCanvas');
@@ -43,6 +44,23 @@ function initialize() {
 
 	// Attach pre-existing shaders
 	function createShader(program, type, sourceCode) {
+		if (gl2) {
+			if (type === gl.FRAGMENT_SHADER) {
+				sourceCode = 'out lowp vec4 my_fragColor;\n' + sourceCode.replace(/texture2D\(/g, 'texture(');
+			}
+			sourceCode = '#version 300 es\n' + sourceCode;
+		} else {
+			switch(type) {
+				case gl.FRAGMENT_SHADER:
+					sourceCode = sourceCode.replace(/^[\t ]*in /gm, 'varying ')
+											.replace(/my_fragColor/g, 'gl_FragColor');
+					break;
+				case gl.VERTEX_SHADER:
+					sourceCode = sourceCode.replace(/^[\t ]*in /gm, 'attribute ')
+											.replace(/^[\t ]*out /gm, 'varying ');
+					break;
+			}
+		}
 		// Compiles either a shader of type gl.VERTEX_SHADER or gl.FRAGMENT_SHADER
 		var shader = gl.createShader(type);
 		gl.shaderSource(shader, sourceCode);
@@ -71,11 +89,10 @@ function initialize() {
 	}
 
 	const program = createProgram(`
-	uniform vec2 u_resolution;
-	attribute vec2 a_position;
-	attribute vec2 a_tex_position;
-
-	varying highp vec2 v_tex_position;
+	in mediump vec2 a_position;
+	in mediump vec2 a_tex_position;
+	uniform mediump vec2 u_resolution;
+	out mediump vec2 v_tex_position;
 	
 	void main() {
 		// convert the rectangle from pixels to 0.0 to 1.0
@@ -91,16 +108,15 @@ function initialize() {
 		v_tex_position = a_tex_position;
 	}
 	`, `
-	varying highp vec2 v_tex_position;
-	
+	in mediump vec2 v_tex_position;
 	uniform sampler2D u_texture;
-	uniform highp vec4 u_fixedcolor;
+	uniform lowp vec4 u_fixedcolor;
 
 	void main() {
 		if (u_fixedcolor.w > 0.0) {
-			gl_FragColor = u_fixedcolor;
+			my_fragColor = u_fixedcolor;
 		} else {
-			gl_FragColor = texture2D(u_texture, v_tex_position);
+			my_fragColor = texture2D(u_texture, v_tex_position);
 		}
 	}
 	`);
