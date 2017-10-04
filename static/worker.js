@@ -116,6 +116,8 @@ function sendCommand(cmd, args) {
 						// Do nothing, script has return
 						break;
 					case 'INTERNAL':
+					case 'REDELIVERED':
+					case 'WRONGLEN':
 						addContentParsed([false, 'Internal error in scripting engine']);
 						break;
 					case 'SOFT_MEMORY_LIMIT':
