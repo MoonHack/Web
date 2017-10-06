@@ -288,36 +288,29 @@ function initialize() {
 			const _relativeWidth = _charsPerLine * charWidth;
 			lineCount = _lineCount;
 
-			const bData = new Float32Array(8 * (lineCount + 2));
-			const btData = new Float32Array(8 * (lineCount + 2));
+			const lc22 = (lineCount + 2) * 2;
+			const bData = new Float32Array(4 * lc22);
+			const btData = new Float32Array(4 * lc22);
 			let y = 0;
 			let o = 0;
-			for(let i = 0; i < lineCount + 2; i++) {
+			for(let i = 0; i < lc22; i++) {
+				const i2 = i % 2;
+
 				btData[o] = 0;
 				bData[o++] = 0;
 
-				btData[o] = 0;
+				btData[o] = i2;
 				bData[o++] = y;
 
 				btData[o] = 1;
 				bData[o++] = _relativeWidth;
 
-				btData[o] = 0;
+				btData[o] = i2;
 				bData[o++] = y;
 
-				y += totalLineHeight;
-
-				btData[o] = 0;
-				bData[o++] = 0;
-
-				btData[o] = 1;
-				bData[o++] = y;
-
-				btData[o] = 1;
-				bData[o++] = _relativeWidth;
-
-				btData[o] = 1;
-				bData[o++] = y;
+				if (i2 === 0) {
+					y += totalLineHeight;
+				}
 			}
 			gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
 			gl.bufferData(gl.ARRAY_BUFFER, bData, gl.STATIC_DRAW);
