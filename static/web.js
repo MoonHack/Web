@@ -132,9 +132,9 @@ function initialize() {
 	gl.clearColor(16.0/255.0, 18.0/255.0, 21.0/255.0, 1.0);
 
 	const posBuffer = gl.createBuffer();
+	gl.enableVertexAttribArray(aPosition);
 	gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
 	gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
-	gl.enableVertexAttribArray(aPosition);
 
 	function cursorBlink() {
 		cursorBlinkOn = !cursorBlinkOn;
@@ -288,18 +288,42 @@ function initialize() {
 			const _relativeWidth = _charsPerLine * charWidth;
 			lineCount = _lineCount;
 
-			const bData = new Float32Array(4 * (lineCount + 2));
+			const bData = new Float32Array(8 * (lineCount + 2));
+			const btData = new Float32Array(8 * (lineCount + 2));
 			let y = 0;
 			let o = 0;
 			for(let i = 0; i < lineCount + 2; i++) {
+				btData[o] = 0;
 				bData[o++] = 0;
+
+				btData[o] = 0;
 				bData[o++] = y;
+
+				btData[o] = 1;
 				bData[o++] = _relativeWidth;
+
+				btData[o] = 0;
 				bData[o++] = y;
+
 				y += totalLineHeight;
+
+				btData[o] = 0;
+				bData[o++] = 0;
+
+				btData[o] = 1;
+				bData[o++] = y;
+
+				btData[o] = 1;
+				bData[o++] = _relativeWidth;
+
+				btData[o] = 1;
+				bData[o++] = y;
 			}
 			gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
 			gl.bufferData(gl.ARRAY_BUFFER, bData, gl.STATIC_DRAW);
+			gl.bindBuffer(gl.ARRAY_BUFFER, texPosBuffer);
+			gl.bufferData(gl.ARRAY_BUFFER, btData, gl.STATIC_DRAW);
+			gl.bindBuffer(gl.ARRAY_BUFFER, null);
 		}
 
 		if (_charsPerLine !== charsPerLine) {
@@ -311,12 +335,6 @@ function initialize() {
 
 	const texPosBuffer = gl.createBuffer();
 	gl.bindBuffer(gl.ARRAY_BUFFER, texPosBuffer);
-	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-		0, 0,
-		1, 0,
-		0, 1,
-		1, 1
-	]), gl.STATIC_DRAW);
 	gl.vertexAttribPointer(aTexPosition, 2, gl.FLOAT, false, 0, 0);
 	gl.enableVertexAttribArray(aTexPosition);
 
@@ -416,8 +434,7 @@ function initialize() {
 				gl.bindTexture(gl.TEXTURE_2D, currentView[1]);
 			}
 
-			gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, y << 4);
-			gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+			gl.drawArrays(gl.TRIANGLE_STRIP, y << 2, 4);
 			y++;
 		}
 		
@@ -462,8 +479,7 @@ function initialize() {
 			r_lastUser = user;
 			r_lastCursorBlinkOn = cursorBlinkOn;
 		}
-		gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, y << 4);
-		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+		gl.drawArrays(gl.TRIANGLE_STRIP, y << 2, 4);
 	}
 
 	function queueRender() {
