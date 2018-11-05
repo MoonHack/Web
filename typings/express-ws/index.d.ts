@@ -1,4 +1,4 @@
-import { Server as WSServer, IServerOptions as WSServerOptions } from 'ws'; 
+import { Server as WSServer, ServerOptions as WSServerOptions } from 'ws';
 import { Application } from 'express';
 import { Server as HTTPServer } from 'http';
 
