@@ -19,8 +19,9 @@ import { sign as signJwt } from 'jsonwebtoken';
 import * as JSON5 from 'json5';
 
 mongoose.connect(config.mongoUrl, {
-	useMongoClient: true,
+	useNewUrlParser: true,
 });
+mongoose.set('useCreateIndex', true);
 (<any>mongoose).Promise = Bluebird; // mongoose wants this!
 
 const app = express();
